@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ShopMart - Shopping Cart</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <!-- Navigation -->
+  <header class="navbar">
+    <div class="nav-container">
+      <a href="index.html" class="logo">🛍️ ShopMart</a>
+      <nav class="nav-links">
+        <a href="index.html">Home</a>
+        <a href="cart.html" class="cart-link active">
+          🛒 Cart <span class="cart-badge" id="cart-count">0</span>
+        </a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container cart-page">
+    <h1 class="section-title">🛒 Your Shopping Cart</h1>
+
+    <div class="cart-layout" id="cart-layout">
+      <!-- Populated by JS -->
+    </div>
+  </main>
+
+  <footer class="footer">
+    <p>© 2026 ShopMart. All rights reserved.</p>
+  </footer>
+
+  <!-- Checkout Modal -->
+  <div class="modal-overlay hidden" id="checkout-modal">
+    <div class="modal">
+      <div class="modal-icon">🎉</div>
+      <h2>Order Placed!</h2>
+      <p>Thank you for your purchase. Your order is being processed.</p>
+      <button class="btn btn-primary" onclick="closeModal()">Continue Shopping</button>
+    </div>
+  </div>
+
+  <script src="data.js"></script>
+  <script src="cart.js"></script>
+  <script>
+    function renderCart() {
+      const cart = getCart();
+      const layout = document.getElementById('cart-layout');
+
+      if (cart.length === 0) {
+        layout.innerHTML = `
+          <div class="cart-empty">
+            <div class="empty-icon">🛒</div>
+            <h2>Your cart is empty</h2>
+            <p>Looks like you haven't added anything yet.</p>
+            <a href="index.html" class="btn btn-primary">Start Shopping</a>
+          </div>`;
+        updateCartBadge();
+        return;
+      }
+
+      // Build items with product data
+      const items = cart.map(item => ({
+        ...item,
+        product: products.find(p => p.id === item.id)
+      })).filter(item => item.product);
+
+      const subtotal = items.reduce((sum, item) => sum + item.product.price * item.qty, 0);
+      const shipping = subtotal >= 50 ? 0 : 5.99;
+      const tax = subtotal * 0.065;
+      const total = subtotal + shipping + tax;
+
+      layout.innerHTML = `
+        <div class="cart-items">
+          <div class="cart-header-row">
+            <span>Product</span>
+            <span>Price</span>
+            <span>Quantity</span>
+            <span>Subtotal</span>
+            <span></span>
+          </div>
+
+          ${items.map(item => `
+            <div class="cart-item" id="cart-item-${item.id}">
+              <div class="cart-item-product">
+                <a href="product.html?id=${item.id}" class="cart-item-emoji">${item.product.emoji}</a>
+                <div class="cart-item-meta">
+                  <a href="product.html?id=${item.id}" class="cart-item-name">${item.product.name}</a>
+                  <span class="cart-item-category">${item.product.category}</span>
+                </div>
+              </div>
+              <span class="cart-item-price">$${item.product.price.toFixed(2)}</span>
+              <div class="qty-control">
+                <button class="qty-btn" onclick="updateQty(${item.id}, ${item.qty - 1})">−</button>
+                <input
+                  type="number"
+                  value="${item.qty}"
+                  min="1"
+                  max="${item.product.stock}"
+                  class="qty-input"
+                  onchange="updateQty(${item.id}, parseInt(this.value))"
+                />
+                <button class="qty-btn" onclick="updateQty(${item.id}, ${item.qty + 1})">+</button>
+              </div>
+              <span class="cart-item-subtotal">$${(item.product.price * item.qty).toFixed(2)}</span>
+              <button class="btn-delete" onclick="removeItem(${item.id})" title="Remove item">🗑️</button>
+            </div>
+          `).join('')}
+
+          <div class="cart-actions-row">
+            <a href="index.html" class="btn btn-secondary">← Continue Shopping</a>
+            <button class="btn btn-danger" onclick="clearCartConfirm()">🗑️ Clear Cart</button>
+          </div>
+        </div>
+
+        <!-- Order Summary -->
+        <aside class="order-summary">
+          <h2>Order Summary</h2>
+          <div class="summary-line">
+            <span>Subtotal (${items.reduce((s, i) => s + i.qty, 0)} items)</span>
+            <span>$${subtotal.toFixed(2)}</span>
+          </div>
+          <div class="summary-line">
+            <span>Shipping</span>
+            <span>${shipping === 0 ? '<span class="free-shipping">FREE</span>' : '$' + shipping.toFixed(2)}</span>
+          </div>
+          ${shipping > 0 ? `<p class="shipping-note">Add $${(50 - subtotal).toFixed(2)} more for free shipping!</p>` : ''}
+          <div class="summary-line">
+            <span>Tax (6.5%)</span>
+            <span>$${tax.toFixed(2)}</span>
+          </div>
+          <div class="summary-line total-line">
+            <span>Total</span>
+            <span>$${total.toFixed(2)}</span>
+          </div>
+
+          <button class="btn btn-primary btn-large btn-checkout" onclick="checkout()">
+            Proceed to Checkout →
+          </button>
+
+          <div class="secure-badge">🔒 Secure Checkout</div>
+
+          <div class="accepted-payments">
+            <span>💳</span><span>🏦</span><span>📱</span>
+          </div>
+        </aside>
+      `;
+
+      updateCartBadge();
+    }
+
+    function updateQty(id, qty) {
+      if (qty < 1) { removeItem(id); return; }
+      const product = products.find(p => p.id === id);
+      if (product && qty > product.stock) qty = product.stock;
+      setCartItemQty(id, qty);
+      renderCart();
+    }
+
+    function removeItem(id) {
+      removeFromCart(id);
+      renderCart();
+    }
+
+    function clearCartConfirm() {
+      if (confirm('Remove all items from your cart?')) {
+        clearCart();
+        renderCart();
+      }
+    }
+
+    function checkout() {
+      clearCart();
+      document.getElementById('checkout-modal').classList.remove('hidden');
+    }
+
+    function closeModal() {
+      document.getElementById('checkout-modal').classList.add('hidden');
+      window.location.href = 'index.html';
+    }
+
+    renderCart();
+  </script>
+</body>
+</html>

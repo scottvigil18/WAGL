@@ -1,0 +1,21 @@
+{
+  "name": "shopmart-backend",
+  "version": "1.0.0",
+  "description": "ShopMart Node.js REST API",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js",
+    "seed": "node src/db/seed.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "better-sqlite3": "11.10.0",
+    "cors": "2.8.5",
+    "express": "4.19.2",
+    "jsonwebtoken": "^9.0.3"
+  },
+  "devDependencies": {
+    "nodemon": "3.1.4"
+  }
+}

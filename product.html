@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ShopMart - Product</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <!-- Navigation -->
+  <header class="navbar">
+    <div class="nav-container">
+      <a href="index.html" class="logo">🛍️ ShopMart</a>
+      <nav class="nav-links">
+        <a href="index.html">Home</a>
+        <a href="cart.html" class="cart-link">
+          🛒 Cart <span class="cart-badge" id="cart-count">0</span>
+        </a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container product-detail-page" id="product-detail">
+    <!-- Populated by JS -->
+  </main>
+
+  <footer class="footer">
+    <p>© 2026 ShopMart. All rights reserved.</p>
+  </footer>
+
+  <script src="data.js"></script>
+  <script src="cart.js"></script>
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const id = parseInt(params.get('id'));
+    const product = products.find(p => p.id === id);
+
+    function renderStars(rating) {
+      const full = Math.floor(rating);
+      const half = rating % 1 >= 0.5 ? 1 : 0;
+      const empty = 5 - full - half;
+      return '★'.repeat(full) + (half ? '½' : '') + '☆'.repeat(empty);
+    }
+
+    function renderReviewStars(r) {
+      return '★'.repeat(r) + '☆'.repeat(5 - r);
+    }
+
+    if (!product) {
+      document.getElementById('product-detail').innerHTML =
+        '<p class="error-msg">Product not found. <a href="index.html">Go back</a></p>';
+    } else {
+      document.title = `ShopMart - ${product.name}`;
+
+      document.getElementById('product-detail').innerHTML = `
+        <!-- Breadcrumb -->
+        <nav class="breadcrumb">
+          <a href="index.html">Home</a> › <span>${product.category}</span> › <span>${product.name}</span>
+        </nav>
+
+        <!-- Product Main Section -->
+        <div class="product-detail-grid">
+          <!-- Left: Image -->
+          <div class="product-detail-image">
+            <div class="product-emoji-large">${product.emoji}</div>
+            <div class="product-badges">
+              ${product.badge ? `<span class="badge badge-${product.badge.toLowerCase().replace(' ','-')}">${product.badge}</span>` : ''}
+            </div>
+          </div>
+
+          <!-- Right: Info -->
+          <div class="product-detail-info">
+            <span class="product-category">${product.category}</span>
+            <h1 class="product-detail-name">${product.name}</h1>
+
+            <div class="product-rating large">
+              <span class="stars">${renderStars(product.rating)}</span>
+              <span class="rating-value">${product.rating}</span>
+              <span class="review-count">(${product.reviews.length} reviews)</span>
+            </div>
+
+            <p class="product-detail-price">$${product.price.toFixed(2)}</p>
+            ${product.originalPrice ? `<p class="original-price">Was: <s>$${product.originalPrice.toFixed(2)}</s> <span class="discount">${Math.round((1 - product.price / product.originalPrice) * 100)}% off</span></p>` : ''}
+
+            <p class="product-detail-desc">${product.description}</p>
+
+            <ul class="product-features">
+              ${product.features.map(f => `<li>✅ ${f}</li>`).join('')}
+            </ul>
+
+            <div class="stock-status ${product.stock > 0 ? 'in-stock' : 'out-of-stock'}">
+              ${product.stock > 0 ? `✅ In Stock (${product.stock} available)` : '❌ Out of Stock'}
+            </div>
+
+            <!-- Quantity + Add to Cart -->
+            <div class="add-to-cart-row">
+              <div class="qty-control">
+                <button class="qty-btn" onclick="changeQty(-1)">−</button>
+                <input type="number" id="qty-input" value="1" min="1" max="${product.stock}" class="qty-input" />
+                <button class="qty-btn" onclick="changeQty(1)">+</button>
+              </div>
+              <button class="btn btn-primary btn-large" onclick="handleAddToCart()" ${product.stock === 0 ? 'disabled' : ''}>
+                🛒 Add to Cart
+              </button>
+            </div>
+
+            <div id="cart-feedback" class="cart-feedback hidden"></div>
+
+            <a href="cart.html" class="btn btn-secondary btn-large" style="margin-top:10px;display:inline-block;">View Cart</a>
+          </div>
+        </div>
+
+        <!-- Reviews Section -->
+        <section class="reviews-section">
+          <h2>Customer Reviews</h2>
+          <div class="reviews-summary">
+            <div class="reviews-avg">
+              <span class="avg-score">${product.rating}</span>
+              <div class="avg-stars">${renderStars(product.rating)}</div>
+              <span>out of 5</span>
+            </div>
+            <div class="reviews-list">
+              ${product.reviews.map(r => `
+                <div class="review-card">
+                  <div class="review-header">
+                    <span class="reviewer-name">${r.name}</span>
+                    <span class="review-stars">${renderReviewStars(r.rating)}</span>
+                    <span class="review-date">${r.date}</span>
+                  </div>
+                  <p class="review-text">${r.comment}</p>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        </section>
+      `;
+    }
+
+    function changeQty(delta) {
+      const input = document.getElementById('qty-input');
+      const newVal = Math.max(1, Math.min(product.stock, parseInt(input.value) + delta));
+      input.value = newVal;
+    }
+
+    function handleAddToCart() {
+      const qty = parseInt(document.getElementById('qty-input').value);
+      for (let i = 0; i < qty; i++) addToCart(product.id);
+      const fb = document.getElementById('cart-feedback');
+      fb.textContent = `✅ ${qty} × "${product.name}" added to cart!`;
+      fb.classList.remove('hidden');
+      setTimeout(() => fb.classList.add('hidden'), 3000);
+    }
+
+    updateCartBadge();
+  </script>
+</body>
+</html>

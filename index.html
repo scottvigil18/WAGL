@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ShopMart - Home</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <!-- Navigation -->
+  <header class="navbar">
+    <div class="nav-container">
+      <a href="index.html" class="logo">🛍️ ShopMart</a>
+      <nav class="nav-links">
+        <a href="index.html" class="active">Home</a>
+        <a href="cart.html" class="cart-link">
+          🛒 Cart <span class="cart-badge" id="cart-count">0</span>
+        </a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Hero Banner -->
+  <section class="hero">
+    <div class="hero-content">
+      <h1>Welcome to ShopMart</h1>
+      <p>Discover amazing products at unbeatable prices</p>
+      <a href="#products" class="btn btn-primary">Shop Now</a>
+    </div>
+  </section>
+
+  <!-- Product Grid -->
+  <main class="container" id="products">
+    <h2 class="section-title">Featured Products</h2>
+
+    <!-- Filter / Sort Bar -->
+    <div class="toolbar">
+      <input type="text" id="search-input" placeholder="🔍 Search products..." class="search-box" />
+      <select id="sort-select" class="sort-select">
+        <option value="default">Sort: Default</option>
+        <option value="price-asc">Price: Low → High</option>
+        <option value="price-desc">Price: High → Low</option>
+        <option value="name-asc">Name: A → Z</option>
+      </select>
+    </div>
+
+    <div class="product-grid" id="product-grid"></div>
+  </main>
+
+  <footer class="footer">
+    <p>© 2026 ShopMart. All rights reserved.</p>
+  </footer>
+
+  <script src="data.js"></script>
+  <script src="cart.js"></script>
+  <script>
+    function renderProducts(list) {
+      const grid = document.getElementById('product-grid');
+      grid.innerHTML = list.map(p => `
+        <div class="product-card">
+          <a href="product.html?id=${p.id}" class="product-link">
+            <div class="product-emoji">${p.emoji}</div>
+            <div class="product-info">
+              <span class="product-category">${p.category}</span>
+              <h3 class="product-name">${p.name}</h3>
+              <div class="product-rating">${renderStars(p.rating)} <span>(${p.reviews.length})</span></div>
+              <p class="product-price">$${p.price.toFixed(2)}</p>
+            </div>
+          </a>
+          <button class="btn btn-primary btn-add" onclick="addToCart(${p.id})">Add to Cart</button>
+        </div>
+      `).join('');
+    }
+
+    function renderStars(rating) {
+      const full = Math.floor(rating);
+      const half = rating % 1 >= 0.5 ? 1 : 0;
+      const empty = 5 - full - half;
+      return '★'.repeat(full) + (half ? '½' : '') + '☆'.repeat(empty);
+    }
+
+    function applyFilters() {
+      const query = document.getElementById('search-input').value.toLowerCase();
+      const sort  = document.getElementById('sort-select').value;
+
+      let list = products.filter(p =>
+        p.name.toLowerCase().includes(query) ||
+        p.category.toLowerCase().includes(query)
+      );
+
+      if (sort === 'price-asc')  list.sort((a, b) => a.price - b.price);
+      if (sort === 'price-desc') list.sort((a, b) => b.price - a.price);
+      if (sort === 'name-asc')   list.sort((a, b) => a.name.localeCompare(b.name));
+
+      renderProducts(list);
+    }
+
+    document.getElementById('search-input').addEventListener('input', applyFilters);
+    document.getElementById('sort-select').addEventListener('change', applyFilters);
+
+    renderProducts(products);
+    updateCartBadge();
+  </script>
+</body>
+</html>

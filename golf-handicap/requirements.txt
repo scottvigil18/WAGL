@@ -1,0 +1,5 @@
+flask==3.1.0
+kagglehub==0.3.12
+gunicorn==23.0.0
+hypothesis==6.122.3
+pytest==8.3.4
