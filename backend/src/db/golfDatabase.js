@@ -57,4 +57,41 @@ if (!hasCourseId) {
   golfDb.exec("ALTER TABLE scores ADD COLUMN course_id INTEGER REFERENCES courses(id)");
 }
 
+// Migration: add par_front and par_back columns to courses if they don't exist
+const courseColumns = golfDb.prepare("PRAGMA table_info(courses)").all();
+const hasParFront = courseColumns.some(col => col.name === 'par_front');
+const hasParBack  = courseColumns.some(col => col.name === 'par_back');
+if (!hasParFront) {
+  golfDb.exec("ALTER TABLE courses ADD COLUMN par_front INTEGER NOT NULL DEFAULT 36");
+}
+if (!hasParBack) {
+  golfDb.exec("ALTER TABLE courses ADD COLUMN par_back INTEGER NOT NULL DEFAULT 36");
+}
+
+// Migration: add email and phone columns to players if they don't exist
+const playerColumns = golfDb.prepare("PRAGMA table_info(players)").all();
+const hasEmail = playerColumns.some(col => col.name === 'email');
+const hasPhone = playerColumns.some(col => col.name === 'phone');
+const hasFirstName = playerColumns.some(col => col.name === 'first_name');
+const hasLastName = playerColumns.some(col => col.name === 'last_name');
+if (!hasEmail) {
+  golfDb.exec("ALTER TABLE players ADD COLUMN email TEXT NOT NULL DEFAULT ''");
+}
+if (!hasPhone) {
+  golfDb.exec("ALTER TABLE players ADD COLUMN phone TEXT NOT NULL DEFAULT ''");
+}
+if (!hasFirstName) {
+  golfDb.exec("ALTER TABLE players ADD COLUMN first_name TEXT NOT NULL DEFAULT ''");
+}
+if (!hasLastName) {
+  golfDb.exec("ALTER TABLE players ADD COLUMN last_name TEXT NOT NULL DEFAULT ''");
+}
+
+// Migration: add archived column to players if it doesn't exist
+const playerColumns2 = golfDb.prepare("PRAGMA table_info(players)").all();
+const hasArchived = playerColumns2.some(col => col.name === 'archived');
+if (!hasArchived) {
+  golfDb.exec("ALTER TABLE players ADD COLUMN archived INTEGER NOT NULL DEFAULT 0");
+}
+
 module.exports = golfDb;

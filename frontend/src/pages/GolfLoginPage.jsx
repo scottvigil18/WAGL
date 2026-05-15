@@ -25,7 +25,7 @@ export default function GolfLoginPage({ onLogin }) {
   return (
     <div className="golf-auth-page">
       <div className="golf-auth-card">
-        <h1>⛳ Golf League Login</h1>
+        <h1>⛳ WAGL Login</h1>
         <form onSubmit={handleSubmit} className="golf-form">
           <label htmlFor="login-username">Username</label>
           <input

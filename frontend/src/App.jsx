@@ -13,6 +13,10 @@ import GolfLeaderboardPage from './pages/GolfLeaderboardPage'
 import GolfScoreHistoryPage from './pages/GolfScoreHistoryPage'
 import GolfScoreForm from './components/GolfScoreForm'
 import GolfNav from './components/GolfNav'
+import GolfAdminPage from './pages/GolfAdminPage'
+import GolfSchedulePage from './pages/GolfSchedulePage'
+import GolfProfilePage from './pages/GolfProfilePage'
+import GolfPlayerProfilePage from './pages/GolfPlayerProfilePage'
 import { getUser, clearToken } from './api/golfApi'
 
 // Simple client-side router using hash-based navigation
@@ -106,6 +110,16 @@ export default function App() {
       golfPage = <GolfScoreForm />
     } else if (path === '#/golf/history') {
       golfPage = <GolfScoreHistoryPage user={golfUser} />
+    } else if (path === '#/golf/schedule') {
+      golfPage = <GolfSchedulePage />
+    } else if (path === '#/golf/profile') {
+      golfPage = <GolfProfilePage />
+    } else if (path.startsWith('#/golf/player/')) {
+      const id = parseInt(path.replace('#/golf/player/', ''), 10)
+      golfPage = <GolfPlayerProfilePage playerId={id} />
+    } else if (path === '#/golf/admin') {
+      if (golfUser.role !== 'admin') return <GolfRedirect />
+      golfPage = <GolfAdminPage />
     } else {
       golfPage = <GolfLeaderboardPage />
     }
@@ -118,6 +132,14 @@ export default function App() {
     )
   }
 
+  // Redirect root to golf login
+  useEffect(() => {
+    const hash = window.location.hash
+    if (!hash || hash === '#' || hash === '#/') {
+      window.location.hash = '#/golf/login'
+    }
+  }, [])
+
   // ShopMart route matching
   let page
   if (path.startsWith('#/product/')) {
@@ -125,6 +147,9 @@ export default function App() {
     page = <ProductPage productId={id} sessionId={sessionId} onCartChange={refreshCart} />
   } else if (path === '#/cart') {
     page = <CartPage cart={cart} sessionId={sessionId} onCartChange={refreshCart} cartLoading={cartLoading} />
+  } else if (path === '#/' || path === '#' || path === '') {
+    // Still waiting for redirect effect — render nothing visible
+    return null
   } else {
     page = <HomePage sessionId={sessionId} onCartChange={refreshCart} />
   }

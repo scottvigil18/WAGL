@@ -3,7 +3,12 @@ CREATE TABLE IF NOT EXISTS players (
   id            INTEGER PRIMARY KEY AUTOINCREMENT,
   username      TEXT    NOT NULL UNIQUE,
   password_hash TEXT    NOT NULL,
+  first_name    TEXT    NOT NULL DEFAULT '',
+  last_name     TEXT    NOT NULL DEFAULT '',
+  email         TEXT    NOT NULL DEFAULT '',
+  phone         TEXT    NOT NULL DEFAULT '',
   role          TEXT    NOT NULL DEFAULT 'player' CHECK(role IN ('player', 'admin')),
+  archived      INTEGER NOT NULL DEFAULT 0,
   created_at    TEXT    NOT NULL DEFAULT (datetime('now'))
 );
 
@@ -14,7 +19,9 @@ CREATE TABLE IF NOT EXISTS courses (
   county        TEXT    NOT NULL,
   course_rating REAL    NOT NULL,
   slope_rating  INTEGER NOT NULL,
-  holes         INTEGER NOT NULL DEFAULT 18
+  holes         INTEGER NOT NULL DEFAULT 18,
+  par_front     INTEGER NOT NULL DEFAULT 36,
+  par_back      INTEGER NOT NULL DEFAULT 36
 );
 
 -- Scores table
@@ -40,3 +47,16 @@ CREATE TABLE IF NOT EXISTS handicaps (
 CREATE INDEX IF NOT EXISTS idx_scores_player ON scores(player_id);
 CREATE INDEX IF NOT EXISTS idx_scores_player_date ON scores(player_id, date_played);
 CREATE INDEX IF NOT EXISTS idx_handicaps_player ON handicaps(player_id);
+
+-- RSVPs table
+CREATE TABLE IF NOT EXISTS rsvps (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  player_id   INTEGER NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+  event_date  TEXT    NOT NULL,
+  course_name TEXT    NOT NULL,
+  response    TEXT    NOT NULL CHECK(response IN ('yes', 'no')),
+  created_at  TEXT    NOT NULL DEFAULT (datetime('now')),
+  UNIQUE(player_id, event_date)
+);
+
+CREATE INDEX IF NOT EXISTS idx_rsvps_event ON rsvps(event_date);

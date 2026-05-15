@@ -247,3 +247,620 @@
   padding: 4px 10px;
   font-size: 0.8rem;
 }
+
+/* ─── Admin Panel ──────────────────────────────────────────────────────────── */
+.admin-page {
+  max-width: 1100px;
+}
+
+.admin-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 2px solid #166534;
+  margin-bottom: 24px;
+}
+
+.admin-tab-btn {
+  padding: 10px 20px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  border-radius: 6px 6px 0 0;
+  transition: background 0.15s, color 0.15s;
+}
+
+.admin-tab-btn:hover {
+  background: #f0fdf4;
+  color: #166534;
+}
+
+.admin-tab-btn.active {
+  background: #166534;
+  color: #fff;
+}
+
+.admin-tab-content {
+  background: #fff;
+  border-radius: 0 8px 8px 8px;
+  padding: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.admin-section-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.admin-section-header h3 {
+  margin: 0;
+  color: #166534;
+  font-size: 1.1rem;
+}
+
+.admin-count {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  background: #f1f5f9;
+  padding: 2px 8px;
+  border-radius: 12px;
+}
+
+.admin-actions {
+  display: flex;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.admin-inline-input {
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 0.85rem;
+  width: 100%;
+  min-width: 80px;
+}
+
+.admin-inline-input:focus {
+  outline: none;
+  border-color: #166534;
+}
+
+.admin-role-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.admin-role-badge.admin {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.admin-role-badge.player {
+  background: #dcfce7;
+  color: #166534;
+}
+
+/* ─── Danger Button ────────────────────────────────────────────────────────── */
+.btn-danger {
+  background: #fee2e2;
+  color: #b91c1c;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: background 0.2s;
+}
+
+.btn-danger:hover {
+  background: #fecaca;
+}
+
+/* ─── CSV Import ───────────────────────────────────────────────────────────── */
+.csv-import-section {
+  max-width: 640px;
+}
+
+.csv-format-info {
+  background: #f8fafc;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 20px;
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+.csv-format-info p {
+  margin: 4px 0;
+}
+
+.csv-format-info code {
+  background: #e2e8f0;
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-size: 0.85rem;
+}
+
+.csv-example {
+  margin-top: 10px;
+}
+
+.csv-example summary {
+  cursor: pointer;
+  color: #166534;
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.csv-example pre {
+  background: #1e293b;
+  color: #e2e8f0;
+  padding: 12px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  margin-top: 8px;
+  overflow-x: auto;
+}
+
+.csv-upload-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.csv-file-input {
+  padding: 8px;
+  border: 2px dashed var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.csv-file-input:hover {
+  border-color: #166534;
+}
+
+.csv-result {
+  margin-top: 16px;
+  padding: 16px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 8px;
+}
+
+.csv-errors {
+  margin-top: 10px;
+  font-size: 0.85rem;
+}
+
+.csv-errors summary {
+  cursor: pointer;
+  color: #b91c1c;
+  font-weight: 600;
+}
+
+.csv-errors ul {
+  margin-top: 8px;
+  padding-left: 20px;
+  color: #b91c1c;
+  line-height: 1.8;
+}
+
+/* ─── Leaderboard Tabs ─────────────────────────────────────────────────────── */
+.leaderboard-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 2px solid #166534;
+  margin-bottom: 20px;
+}
+
+.leaderboard-tab-btn {
+  padding: 9px 20px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  border-radius: 6px 6px 0 0;
+  transition: background 0.15s, color 0.15s;
+}
+
+.leaderboard-tab-btn:hover {
+  background: #f0fdf4;
+  color: #166534;
+}
+
+.leaderboard-tab-btn.active {
+  background: #166534;
+  color: #fff;
+}
+
+.leaderboard-tab-content {
+  background: #fff;
+  border-radius: 0 8px 8px 8px;
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.leaderboard-refresh-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 12px;
+}
+
+.rank-cell {
+  font-weight: 700;
+  font-size: 1rem;
+  text-align: center;
+}
+
+.points-cell {
+  text-align: center;
+}
+
+.weekly-points-badge {
+  display: inline-block;
+  background: #166534;
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.85rem;
+  padding: 2px 10px;
+  border-radius: 12px;
+}
+
+.points-pending {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  font-style: italic;
+}
+
+.leaderboard-note {
+  margin-top: 14px;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+/* ─── Weekly Scores ────────────────────────────────────────────────────────── */
+.weekly-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.weekly-label {
+  font-weight: 600;
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
+.weekly-select {
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 0.95rem;
+  background: #fff;
+  min-width: 240px;
+  cursor: pointer;
+}
+
+.weekly-select:focus {
+  outline: none;
+  border-color: #166534;
+  box-shadow: 0 0 0 3px rgba(22, 101, 52, 0.1);
+}
+
+.weekly-heading {
+  color: #166534;
+  font-size: 1rem;
+  margin-bottom: 14px;
+}
+
+/* ─── Admin Add Score Form ─────────────────────────────────────────────────── */
+.admin-add-score-form {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.admin-add-score-form h4 {
+  margin: 0 0 16px;
+  color: #166534;
+  font-size: 0.95rem;
+}
+
+.admin-add-score-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.admin-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.admin-field label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.admin-add-score-actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* ─── Read-only form field ─────────────────────────────────────────────────── */
+.golf-form-readonly {
+  background: #f1f5f9;
+  color: var(--text-muted);
+  cursor: default;
+}
+
+/* ─── Nine Selection Radio Buttons ────────────────────────────────────────── */
+.nine-radio-group {
+  display: flex;
+  gap: 12px;
+}
+
+.nine-radio-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  padding: 10px 14px;
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.95rem;
+  font-weight: 500;
+  transition: border-color 0.15s, background 0.15s;
+  user-select: none;
+}
+
+.nine-radio-option input[type="radio"] {
+  accent-color: #166534;
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+.nine-radio-option.selected {
+  border-color: #166534;
+  background: #f0fdf4;
+  color: #166534;
+}
+
+.nine-radio-option:hover {
+  border-color: #166534;
+}
+
+.nine-par-badge {
+  margin-left: auto;
+  background: #166534;
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+
+.par-info-banner {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 0.9rem;
+  color: #166534;
+}
+
+/* ─── Season Schedule ──────────────────────────────────────────────────────── */
+.schedule-legend {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.schedule-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.schedule-dot.played   { background: #166534; }
+.schedule-dot.upcoming { background: #cbd5e1; }
+
+.schedule-row-played td {
+  color: var(--text);
+  opacity: 1;
+}
+
+.schedule-row-upcoming td {
+  color: #94a3b8;
+}
+
+.schedule-row-next {
+  background: #f0fdf4;
+}
+
+.schedule-row-next td {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.schedule-status {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 10px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.schedule-status.played {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.schedule-status.next {
+  background: #166534;
+  color: #fff;
+}
+
+.schedule-status.upcoming {
+  background: #f1f5f9;
+  color: #94a3b8;
+}
+
+/* ─── Profile Nav Link ─────────────────────────────────────────────────────── */
+.golf-nav-username-link {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.9);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+  transition: color 0.15s;
+}
+
+.golf-nav-username-link:hover {
+  color: #fff;
+}
+
+/* ─── Profile Page ─────────────────────────────────────────────────────────── */
+.profile-card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 28px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  max-width: 500px;
+}
+
+.profile-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.profile-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.profile-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+
+.profile-value {
+  font-size: 1rem;
+  color: var(--text);
+}
+
+.profile-form-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+/* ─── Player Link ──────────────────────────────────────────────────────────── */
+.player-link {
+  color: #166534;
+  text-decoration: none;
+  transition: color 0.15s;
+}
+
+.player-link:hover {
+  color: #14532d;
+  text-decoration: underline;
+}
+
+/* ─── Next Week RSVP ───────────────────────────────────────────────────────── */
+.next-week-rsvp {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+}
+
+.next-week-prompt {
+  font-size: 0.95rem;
+  margin-bottom: 8px;
+  color: #166534;
+}
+
+.next-week-question {
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin-bottom: 10px;
+  color: var(--text);
+}
+
+/* ─── RSVP Columns ─────────────────────────────────────────────────────────── */
+.rsvp-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.rsvp-column {
+  background: #f8fafc;
+  border-radius: 8px;
+  padding: 16px;
+  border: 1px solid var(--border);
+}
+
+.rsvp-column h4 {
+  margin: 0 0 12px;
+  font-size: 0.95rem;
+}
+
+.rsvp-yes {
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+}
+
+.rsvp-no {
+  border-color: #fecaca;
+  background: #fef2f2;
+}
+
+.rsvp-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.rsvp-list li {
+  padding: 6px 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  font-size: 0.9rem;
+}
+
+.rsvp-list li:last-child {
+  border-bottom: none;
+}

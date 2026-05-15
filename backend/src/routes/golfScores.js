@@ -10,6 +10,33 @@ const DEFAULT_COURSE_RATING = 72.0;
 const DEFAULT_SLOPE_RATING = 113;
 
 /**
+ * GET /api/golf/players/:id
+ * Public endpoint: return a player's public profile info.
+ */
+router.get('/players/:id', (req, res) => {
+  try {
+    const playerId = parseInt(req.params.id, 10);
+    if (isNaN(playerId)) return res.status(400).json({ error: 'Invalid player ID' });
+
+    const player = golfDb.prepare(`
+      SELECT p.id, p.username, p.first_name, p.last_name, p.email, p.phone, p.created_at,
+             h.handicap_index,
+             COUNT(s.id) AS score_count
+      FROM players p
+      LEFT JOIN handicaps h ON p.id = h.player_id
+      LEFT JOIN scores s ON p.id = s.player_id
+      WHERE p.id = ? AND p.role = 'player'
+      GROUP BY p.id
+    `).get(playerId);
+
+    if (!player) return res.status(404).json({ error: 'Player not found' });
+    return res.json(player);
+  } catch (err) {
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
  * Validates that a score is a positive integer.
  */
 function isValidScore(value) {
@@ -79,7 +106,7 @@ async function recalculateHandicap(playerId) {
 router.get('/courses', (req, res) => {
   try {
     const courses = golfDb.prepare(
-      'SELECT id, name, county, course_rating, slope_rating, holes FROM courses ORDER BY county, name'
+      'SELECT id, name, county, course_rating, slope_rating, holes, par_front, par_back FROM courses ORDER BY county, name'
     ).all();
 
     return res.status(200).json(courses);
@@ -121,6 +148,16 @@ router.post('/scores', authMiddleware, async (req, res) => {
     // Validate date_played
     if (!date_played || !isValidDate(date_played)) {
       return res.status(400).json({ error: 'date_played must be a valid ISO 8601 date (YYYY-MM-DD)' });
+    }
+
+    // Enforce 24-hour submission window for players (admins bypass this)
+    if (req.user.role !== 'admin') {
+      const playedMs = new Date(date_played + 'T00:00:00Z').getTime();
+      const nowMs = Date.now();
+      const diffHours = Math.abs(nowMs - playedMs) / (1000 * 60 * 60);
+      if (diffHours > 24) {
+        return res.status(403).json({ error: 'Scores must be submitted within 24 hours of the date played. Please contact your admin.' });
+      }
     }
 
     // Insert score (UNIQUE constraint will catch duplicates)
@@ -232,6 +269,7 @@ router.get('/scores/me', authMiddleware, (req, res) => {
 /**
  * GET /api/golf/leaderboard
  * Public endpoint: return all players with their most recent score, date_played, and handicap_index.
+ * weekly_points is a placeholder — full calculation to be added later.
  * Sorted by handicap_index ASC (nulls last).
  */
 router.get('/leaderboard', (req, res) => {
@@ -244,7 +282,13 @@ router.get('/leaderboard', (req, res) => {
         rs.holes,
         rs.date_played,
         rs.course_name,
-        h.handicap_index
+        CASE
+          WHEN date(rs.date_played, 'weekday 0', '-6 days') = date('now', 'weekday 0', '-6 days')
+          THEN 1 ELSE 0
+        END AS scored_this_week,
+        h.handicap_index,
+        NULL AS season_total_points,
+        NULL AS weekly_points
       FROM players p
       LEFT JOIN (
         SELECT s1.player_id, s1.score, s1.holes, s1.date_played, c.name AS course_name
@@ -257,12 +301,121 @@ router.get('/leaderboard', (req, res) => {
         ) s2 ON s1.player_id = s2.player_id AND s1.date_played = s2.max_date
       ) rs ON p.id = rs.player_id
       LEFT JOIN handicaps h ON p.id = h.player_id
+      WHERE p.role = 'player' AND (p.archived IS NULL OR p.archived = 0)
       ORDER BY
         CASE WHEN h.handicap_index IS NULL THEN 1 ELSE 0 END,
         h.handicap_index ASC
     `).all();
 
     return res.status(200).json(leaderboard);
+  } catch (err) {
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * GET /api/golf/weeks
+ * Public endpoint: returns a list of distinct week start dates (Monday) that have scores.
+ * Each entry: { week_start: 'YYYY-MM-DD', label: 'Week of Mon DD, YYYY' }
+ */
+router.get('/weeks', (req, res) => {
+  try {
+    // SQLite: date(date_played, 'weekday 0', '-6 days') gives the Monday of the week
+    const rows = golfDb.prepare(`
+      SELECT DISTINCT
+        date(date_played, 'weekday 0', '-6 days') AS week_start
+      FROM scores
+      ORDER BY week_start DESC
+    `).all();
+
+    const weeks = rows.map(r => {
+      const d = new Date(r.week_start + 'T00:00:00Z');
+      const label = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
+      return { week_start: r.week_start, label: `Week of ${label}` };
+    });
+
+    return res.status(200).json(weeks);
+  } catch (err) {
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * GET /api/golf/leaderboard/weekly?week=YYYY-MM-DD
+ * Public endpoint: returns all player scores for the week starting on the given Monday.
+ * weekly_points is a placeholder — full calculation to be added later.
+ */
+router.get('/leaderboard/weekly', (req, res) => {
+  try {
+    const { week } = req.query;
+    if (!week || !/^\d{4}-\d{2}-\d{2}$/.test(week)) {
+      return res.status(400).json({ error: 'week query param must be YYYY-MM-DD (Monday of the week)' });
+    }
+
+    // End of week = Sunday = week_start + 6 days
+    const rows = golfDb.prepare(`
+      SELECT
+        p.id,
+        p.username,
+        s.score,
+        s.holes,
+        s.date_played,
+        c.name AS course_name,
+        c.course_rating,
+        c.slope_rating,
+        h.handicap_index,
+        NULL AS weekly_points
+      FROM scores s
+      JOIN players p ON s.player_id = p.id
+      LEFT JOIN courses c ON s.course_id = c.id
+      LEFT JOIN handicaps h ON p.id = h.player_id
+      WHERE p.role = 'player' AND (p.archived IS NULL OR p.archived = 0)
+        AND date(s.date_played, 'weekday 0', '-6 days') = ?
+      ORDER BY s.date_played ASC, p.username ASC
+    `).all(week);
+
+    return res.status(200).json(rows);
+  } catch (err) {
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * POST /api/golf/rsvp
+ * Submit or update an RSVP for a future event.
+ * Body: { event_date, course_name, response: 'yes'|'no' }
+ */
+router.post('/rsvp', authMiddleware, (req, res) => {
+  try {
+    const { event_date, course_name, response } = req.body;
+    const playerId = req.user.id;
+
+    if (!event_date || !/^\d{4}-\d{2}-\d{2}$/.test(event_date)) {
+      return res.status(400).json({ error: 'event_date must be YYYY-MM-DD' });
+    }
+    if (!course_name || typeof course_name !== 'string') {
+      return res.status(400).json({ error: 'course_name is required' });
+    }
+    if (!['yes', 'no'].includes(response)) {
+      return res.status(400).json({ error: 'response must be yes or no' });
+    }
+
+    // Upsert
+    const existing = golfDb.prepare(
+      'SELECT id FROM rsvps WHERE player_id = ? AND event_date = ?'
+    ).get(playerId, event_date);
+
+    if (existing) {
+      golfDb.prepare(
+        "UPDATE rsvps SET response = ?, course_name = ?, created_at = datetime('now') WHERE id = ?"
+      ).run(response, course_name, existing.id);
+    } else {
+      golfDb.prepare(
+        'INSERT INTO rsvps (player_id, event_date, course_name, response) VALUES (?, ?, ?, ?)'
+      ).run(playerId, event_date, course_name, response);
+    }
+
+    return res.status(200).json({ message: 'RSVP saved' });
   } catch (err) {
     return res.status(500).json({ error: 'Internal server error' });
   }

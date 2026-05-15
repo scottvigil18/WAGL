@@ -1,12 +1,38 @@
 import { useState } from 'react'
-import { register, login, setToken } from '../api/golfApi'
+import { register, login, setToken, checkUsername } from '../api/golfApi'
+import { formatPhoneInput } from '../utils/formatPhone'
 
 export default function GolfRegisterPage({ onLogin }) {
+  const [firstName, setFirstName] = useState('')
+  const [lastName, setLastName] = useState('')
   const [username, setUsername] = useState('')
+  const [usernameStatus, setUsernameStatus] = useState('') // '', 'checking', 'taken', 'available'
+  const [email, setEmail] = useState('')
+  const [phone, setPhone] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+
+  async function handleUsernameBlur() {
+    if (!username || username.trim().length < 3) {
+      setUsernameStatus('')
+      return
+    }
+    setUsernameStatus('checking')
+    try {
+      const result = await checkUsername(username.trim())
+      if (result.available) {
+        setUsernameStatus('available')
+      } else {
+        setUsernameStatus('taken')
+        setUsername('')
+        setError('Username is already taken. Please choose another.')
+      }
+    } catch {
+      setUsernameStatus('')
+    }
+  }
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -19,7 +45,7 @@ export default function GolfRegisterPage({ onLogin }) {
 
     setLoading(true)
     try {
-      await register(username, password)
+      await register(username, password, email, phone, firstName, lastName)
       const data = await login(username, password)
       setToken(data.token)
       onLogin({ id: data.id, username: data.username, role: data.role })
@@ -33,17 +59,58 @@ export default function GolfRegisterPage({ onLogin }) {
   return (
     <div className="golf-auth-page">
       <div className="golf-auth-card">
-        <h1>⛳ Golf League Register</h1>
+        <h1>⛳ WAGL Register</h1>
         <form onSubmit={handleSubmit} className="golf-form">
+          <label htmlFor="reg-firstname">First Name</label>
+          <input
+            id="reg-firstname"
+            type="text"
+            value={firstName}
+            onChange={e => setFirstName(e.target.value)}
+            placeholder="First name"
+            required
+          />
+          <label htmlFor="reg-lastname">Last Name</label>
+          <input
+            id="reg-lastname"
+            type="text"
+            value={lastName}
+            onChange={e => setLastName(e.target.value)}
+            placeholder="Last name"
+            required
+          />
           <label htmlFor="reg-username">Username</label>
           <input
             id="reg-username"
             type="text"
             value={username}
-            onChange={e => setUsername(e.target.value)}
+            onChange={e => { setUsername(e.target.value); setUsernameStatus(''); setError('') }}
+            onBlur={handleUsernameBlur}
             placeholder="Choose a username (min 3 chars)"
             required
             minLength={3}
+          />
+          {usernameStatus === 'checking' && <p className="golf-loading" style={{margin: '2px 0', fontSize: '0.8rem'}}>Checking availability…</p>}
+          {usernameStatus === 'available' && <p className="golf-success" style={{margin: '2px 0', fontSize: '0.8rem'}}>✓ Username available</p>}
+          {usernameStatus === 'taken' && <p className="golf-error" style={{margin: '2px 0', fontSize: '0.8rem'}}>✗ Username taken</p>}
+          <label htmlFor="reg-email">Email</label>
+          <input
+            id="reg-email"
+            type="email"
+            value={email}
+            onChange={e => setEmail(e.target.value)}
+            placeholder="your@email.com"
+            required
+          />
+          <label htmlFor="reg-phone">Phone Number</label>
+          <input
+            id="reg-phone"
+            type="tel"
+            value={phone}
+            onChange={e => setPhone(formatPhoneInput(e.target.value))}
+            placeholder="xxx-xxx-xxxx"
+            required
+            maxLength={12}
           />
           <label htmlFor="reg-password">Password</label>
           <input

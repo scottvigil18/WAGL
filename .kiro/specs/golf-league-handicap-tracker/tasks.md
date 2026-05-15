@@ -41,19 +41,19 @@ This plan implements a golf league management module within the existing ShopMar
     - Handle error cases: 400 validation, 409 duplicate username, 403 league full, 401 invalid credentials
     - _Requirements: 1.1–1.8, 2.1–2.6_
 
-  - [ ]* 2.3 Write property tests for registration (Properties 1–4)
+  - [x]* 2.3 Write property tests for registration (Properties 1–4)
     - **Property 1: Valid registration creates a player**
     - **Property 2: Duplicate username registration is rejected**
     - **Property 3: Invalid registration input is rejected**
     - **Property 4: Passwords are never stored in plain text**
     - **Validates: Requirements 1.2, 1.3, 1.4, 1.5, 1.6**
 
-  - [ ]* 2.4 Write property tests for authentication (Properties 5–6)
+  - [x]* 2.4 Write property tests for authentication (Properties 5–6)
     - **Property 5: Valid credentials produce a correct JWT**
     - **Property 6: Invalid credentials are rejected**
     - **Validates: Requirements 2.2, 2.3, 2.4, 2.5, 2.6**
 
-  - [ ]* 2.5 Write property tests for authorization (Properties 7–8)
+  - [x]* 2.5 Write property tests for authorization (Properties 7–8)
     - **Property 7: Protected endpoints reject unauthenticated requests**
     - **Property 8: Player role cannot access admin endpoints**
     - **Validates: Requirements 3.2, 3.3, 3.4, 5.3**
@@ -78,7 +78,7 @@ This plan implements a golf league management module within the existing ShopMar
     - Run golf seed on startup to ensure admin account exists
     - _Requirements: 1.1, 2.1, 4.1, 6.1_
 
-  - [ ]* 3.4 Write property tests for score submission (Properties 9–11)
+  - [x]* 3.4 Write property tests for score submission (Properties 9–11)
     - **Property 9: Valid score submission creates an entry**
     - **Property 10: Duplicate date score submission is rejected**
     - **Property 11: Invalid score values are rejected**
@@ -183,3 +183,21 @@ This plan implements a golf league management module within the existing ShopMar
 - The backend uses CommonJS (`require`/`module.exports`), the frontend uses ESM
 - The Python service runs in a venv on port 5001; the Node backend calls it internally
 - All frontend API calls use relative paths to leverage the Vite dev proxy
+
+## Task Dependency Graph
+
+```json
+{
+  "waves": [
+    { "id": 0, "tasks": ["1.1", "1.2"] },
+    { "id": 1, "tasks": ["1.3", "2.1"] },
+    { "id": 2, "tasks": ["2.2", "3.1", "5.1"] },
+    { "id": 3, "tasks": ["2.3", "2.4", "2.5", "3.2", "5.2"] },
+    { "id": 4, "tasks": ["3.3", "3.4", "5.3"] },
+    { "id": 5, "tasks": ["3.5", "7.1"] },
+    { "id": 6, "tasks": ["7.2", "7.3", "7.4", "7.5", "7.6"] },
+    { "id": 7, "tasks": ["7.7"] },
+    { "id": 8, "tasks": ["7.8"] }
+  ]
+}
+```
