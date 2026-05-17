@@ -34,7 +34,6 @@ function seedCourses() {
     const courses = [
       // Weber County — 9-hole courses only have par_front (the 9 holes played)
       { name: 'El Monte Golf Course',            county: 'Weber', course_rating: 32.4, slope_rating: 104, holes: 9,  par_front: 35, par_back: 35 },
-      { name: 'Ben Lomond Golf Course',           county: 'Weber', course_rating: 67.9, slope_rating: 112, holes: 18, par_front: 36, par_back: 36 },
       { name: 'The Barn Golf Club',               county: 'Weber', course_rating: 70.2, slope_rating: 121, holes: 18, par_front: 36, par_back: 36 },
       { name: 'Mount Ogden Golf Course',          county: 'Weber', course_rating: 69.8, slope_rating: 123, holes: 18, par_front: 36, par_back: 35 },
       { name: "Schneiter's Riverside Golf Course",county: 'Weber', course_rating: 68.5, slope_rating: 116, holes: 18, par_front: 36, par_back: 36 },
@@ -47,6 +46,7 @@ function seedCourses() {
       { name: 'Davis Park Golf Course',           county: 'Davis', course_rating: 69.5, slope_rating: 119, holes: 18, par_front: 35, par_back: 36 },
       { name: 'Eaglewood Golf Course',            county: 'Davis', course_rating: 70.8, slope_rating: 125, holes: 18, par_front: 36, par_back: 36 },
       { name: 'Glen Eagle Golf Club',             county: 'Davis', course_rating: 71.0, slope_rating: 124, holes: 18, par_front: 36, par_back: 36 },
+      { name: 'Hubbard Memorial Golf Course',     county: 'Davis', course_rating: 69.0, slope_rating: 118, holes: 18, par_front: 36, par_back: 36 },
       { name: 'Lakeside Golf Course',             county: 'Davis', course_rating: 68.2, slope_rating: 114, holes: 18, par_front: 36, par_back: 36 },
       { name: "Schneiter's Bluff Golf Course",    county: 'Davis', course_rating: 69.9, slope_rating: 120, holes: 18, par_front: 36, par_back: 36 },
       { name: 'Sun Hills Golf Course',            county: 'Davis', course_rating: 70.5, slope_rating: 126, holes: 18, par_front: 36, par_back: 36 },
@@ -66,7 +66,6 @@ function seedCourses() {
     // Backfill par values for existing courses that still have defaults
     const parMap = {
       'El Monte Golf Course':             { par_front: 35, par_back: 35 },
-      'Ben Lomond Golf Course':           { par_front: 36, par_back: 36 },
       'The Barn Golf Club':               { par_front: 36, par_back: 36 },
       'Mount Ogden Golf Course':          { par_front: 36, par_back: 35 },
       "Schneiter's Riverside Golf Course":{ par_front: 36, par_back: 36 },
@@ -78,6 +77,7 @@ function seedCourses() {
       'Davis Park Golf Course':           { par_front: 35, par_back: 36 },
       'Eaglewood Golf Course':            { par_front: 36, par_back: 36 },
       'Glen Eagle Golf Club':             { par_front: 36, par_back: 36 },
+      'Hubbard Memorial Golf Course':     { par_front: 36, par_back: 36 },
       'Lakeside Golf Course':             { par_front: 36, par_back: 36 },
       "Schneiter's Bluff Golf Course":    { par_front: 36, par_back: 36 },
       'Sun Hills Golf Course':            { par_front: 36, par_back: 36 },

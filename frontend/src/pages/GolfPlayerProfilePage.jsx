@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react'
-import { getPlayerProfile } from '../api/golfApi'
+import { getPlayerProfile, getUser } from '../api/golfApi'
 import { formatPhoneDisplay } from '../utils/formatPhone'
+import PhotoGallery from '../components/PhotoGallery'
 
 export default function GolfPlayerProfilePage({ playerId }) {
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const currentUser = getUser()
 
   useEffect(() => {
     async function load() {
@@ -63,6 +65,8 @@ export default function GolfPlayerProfilePage({ playerId }) {
         </div>
         <a href="#/golf/leaderboard" className="btn btn-secondary">← Back to Leaderboard</a>
       </div>
+
+      <PhotoGallery playerId={playerId} canUpload={false} />
     </div>
   )
 }

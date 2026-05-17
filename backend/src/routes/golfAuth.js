@@ -1,12 +1,38 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
 const golfDb = require('../db/golfDatabase');
 const { JWT_SECRET } = require('../middleware/golfAuth');
 
 const router = express.Router();
 
 const LEAGUE_MAX_PLAYERS = 50;
+
+// Avatar upload setup
+const AVATAR_DIR = path.join(__dirname, '../../data/avatars');
+if (!fs.existsSync(AVATAR_DIR)) {
+  fs.mkdirSync(AVATAR_DIR, { recursive: true });
+}
+const avatarStorage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, AVATAR_DIR),
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname) || '.jpg';
+    cb(null, `avatar-${req.user.id}${ext}`);
+  }
+});
+const avatarUpload = multer({
+  storage: avatarStorage,
+  limits: { fileSize: 2 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const allowed = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (allowed.includes(ext)) cb(null, true);
+    else cb(new Error('Only image files are allowed'));
+  }
+});
 
 /**
  * POST /api/golf/register
@@ -148,9 +174,13 @@ router.get('/check-username', (req, res) => {
  */
 router.get('/profile', authMiddleware, (req, res) => {
   try {
-    const player = golfDb.prepare(
-      'SELECT id, username, first_name, last_name, email, phone, role, created_at FROM players WHERE id = ?'
-    ).get(req.user.id);
+    const player = golfDb.prepare(`
+      SELECT p.id, p.username, p.first_name, p.last_name, p.email, p.phone, p.role, p.avatar, p.created_at,
+             h.handicap_index
+      FROM players p
+      LEFT JOIN handicaps h ON p.id = h.player_id
+      WHERE p.id = ?
+    `).get(req.user.id);
     if (!player) return res.status(404).json({ error: 'Player not found' });
     return res.json(player);
   } catch (err) {
@@ -218,6 +248,62 @@ router.put('/profile', authMiddleware, (req, res) => {
     }
     return res.status(500).json({ error: 'Internal server error' });
   }
+});
+
+/**
+ * POST /api/golf/messages
+ * Send a message to the admin.
+ */
+router.post('/messages', authMiddleware, (req, res) => {
+  try {
+    const { subject, body } = req.body;
+    if (!subject || typeof subject !== 'string' || subject.trim().length < 1) {
+      return res.status(400).json({ error: 'Subject is required' });
+    }
+    if (!body || typeof body !== 'string' || body.trim().length < 1) {
+      return res.status(400).json({ error: 'Message body is required' });
+    }
+
+    golfDb.prepare(
+      'INSERT INTO messages (player_id, subject, body) VALUES (?, ?, ?)'
+    ).run(req.user.id, subject.trim(), body.trim());
+
+    return res.status(201).json({ message: 'Message sent to admin' });
+  } catch (err) {
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * POST /api/golf/profile/avatar
+ * Upload an avatar image for the authenticated user.
+ */
+router.post('/profile/avatar', authMiddleware, (req, res, next) => {
+  avatarUpload.single('avatar')(req, res, (err) => {
+    if (err) {
+      return res.status(400).json({ error: err.message || 'Avatar upload failed' });
+    }
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
+
+    const avatarUrl = `/api/golf/avatars/${req.file.filename}`;
+    golfDb.prepare('UPDATE players SET avatar = ? WHERE id = ?').run(avatarUrl, req.user.id);
+
+    return res.json({ avatar: avatarUrl });
+  });
+});
+
+/**
+ * GET /api/golf/avatars/:filename
+ * Serve avatar images.
+ */
+router.get('/avatars/:filename', (req, res) => {
+  const filePath = path.join(AVATAR_DIR, req.params.filename);
+  if (!fs.existsSync(filePath)) {
+    return res.status(404).json({ error: 'Avatar not found' });
+  }
+  res.sendFile(filePath);
 });
 
 module.exports = router;

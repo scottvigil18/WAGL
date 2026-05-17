@@ -342,21 +342,50 @@ router.get('/weeks', (req, res) => {
 
 /**
  * GET /api/golf/leaderboard/weekly?week=YYYY-MM-DD
- * Public endpoint: returns all player scores for the week starting on the given Monday.
+ * Public endpoint: returns all player scores for the given date.
  * weekly_points is a placeholder — full calculation to be added later.
  */
 router.get('/leaderboard/weekly', (req, res) => {
   try {
     const { week } = req.query;
-    if (!week || !/^\d{4}-\d{2}-\d{2}$/.test(week)) {
-      return res.status(400).json({ error: 'week query param must be YYYY-MM-DD (Monday of the week)' });
+
+    // If no week param, return ALL scores sorted by date
+    if (!week) {
+      const rows = golfDb.prepare(`
+        SELECT
+          p.id,
+          p.username,
+          p.first_name,
+          p.last_name,
+          s.score,
+          s.holes,
+          s.date_played,
+          c.name AS course_name,
+          c.course_rating,
+          c.slope_rating,
+          h.handicap_index,
+          NULL AS weekly_points
+        FROM scores s
+        JOIN players p ON s.player_id = p.id
+        LEFT JOIN courses c ON s.course_id = c.id
+        LEFT JOIN handicaps h ON p.id = h.player_id
+        WHERE p.role = 'player' AND (p.archived IS NULL OR p.archived = 0)
+        ORDER BY s.date_played DESC, s.score ASC
+      `).all();
+      return res.status(200).json(rows);
     }
 
-    // End of week = Sunday = week_start + 6 days
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(week)) {
+      return res.status(400).json({ error: 'week query param must be YYYY-MM-DD' });
+    }
+
+    // Match scores within ±2 days of the event date to account for flexible play dates
     const rows = golfDb.prepare(`
       SELECT
         p.id,
         p.username,
+        p.first_name,
+        p.last_name,
         s.score,
         s.holes,
         s.date_played,
@@ -370,11 +399,30 @@ router.get('/leaderboard/weekly', (req, res) => {
       LEFT JOIN courses c ON s.course_id = c.id
       LEFT JOIN handicaps h ON p.id = h.player_id
       WHERE p.role = 'player' AND (p.archived IS NULL OR p.archived = 0)
-        AND date(s.date_played, 'weekday 0', '-6 days') = ?
-      ORDER BY s.date_played ASC, p.username ASC
-    `).all(week);
+        AND s.date_played BETWEEN date(?, '-2 days') AND date(?, '+2 days')
+      ORDER BY s.score ASC, p.username ASC
+    `).all(week, week);
 
     return res.status(200).json(rows);
+  } catch (err) {
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * GET /api/golf/rsvp?event_date=YYYY-MM-DD
+ * Get the authenticated user's RSVP for a specific event date.
+ */
+router.get('/rsvp', authMiddleware, (req, res) => {
+  try {
+    const { event_date } = req.query;
+    if (!event_date) return res.json({ response: null });
+
+    const rsvp = golfDb.prepare(
+      'SELECT response FROM rsvps WHERE player_id = ? AND event_date = ?'
+    ).get(req.user.id, event_date);
+
+    return res.json({ response: rsvp ? rsvp.response : null });
   } catch (err) {
     return res.status(500).json({ error: 'Internal server error' });
   }

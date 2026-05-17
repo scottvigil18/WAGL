@@ -56,6 +56,7 @@
   align-items: center;
   gap: 12px;
   margin-left: auto;
+  flex-shrink: 0;
 }
 
 .golf-nav-username {
@@ -171,6 +172,7 @@
 
 .golf-table {
   width: 100%;
+  table-layout: fixed;
   border-collapse: collapse;
   background: #fff;
   border-radius: 8px;
@@ -180,9 +182,13 @@
 
 .golf-table th,
 .golf-table td {
-  padding: 12px 16px;
+  padding: 8px 8px;
   text-align: left;
   border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 0.85rem;
 }
 
 .golf-table th {
@@ -250,7 +256,9 @@
 
 /* ─── Admin Panel ──────────────────────────────────────────────────────────── */
 .admin-page {
-  max-width: 1100px;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px 16px;
 }
 
 .admin-tabs {
@@ -285,7 +293,7 @@
 .admin-tab-content {
   background: #fff;
   border-radius: 0 8px 8px 8px;
-  padding: 24px;
+  padding: 16px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
@@ -863,4 +871,991 @@
 
 .rsvp-list li:last-child {
   border-bottom: none;
+}
+
+/* ─── Admin Players Table Fixes ────────────────────────────────────────────── */
+
+/* ─── Actions column override — allow buttons to wrap/show ─────────────────── */
+.admin-actions {
+  white-space: normal;
+  overflow: visible;
+}
+
+/* ─── Admin Scores Tab table column widths ─────────────────────────────────── */
+.admin-tab-content .golf-table-wrap .golf-table th,
+.admin-tab-content .golf-table-wrap .golf-table td {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ─── Scores tab: 6-column layout (Player, Score, Holes, Date, Course, Actions) */
+.admin-tab-content .golf-table {
+  table-layout: auto;
+}
+
+/* ─── Admin Filters ────────────────────────────────────────────────────────── */
+.admin-filters {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.admin-filters .admin-inline-input {
+  min-width: 140px;
+  max-width: 200px;
+}
+
+/* ─── Leaderboard page wider layout ───────────────────────────────────────── */
+.golf-page:has(.leaderboard-tabs) {
+  max-width: 1200px;
+}
+
+.leaderboard-tab-content .golf-table {
+  table-layout: auto;
+}
+
+/* ─── Wide page variant ────────────────────────────────────────────────────── */
+.golf-page-wide {
+  max-width: 1200px;
+}
+
+.golf-page-wide .golf-table {
+  table-layout: auto;
+}
+
+/* ─── Disabled radio option ────────────────────────────────────────────────── */
+.nine-radio-option.disabled {
+  opacity: 0.7;
+  cursor: default;
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+}
+
+.nine-radio-option.disabled input {
+  cursor: default;
+}
+
+/* ─── Profile Avatar ───────────────────────────────────────────────────────── */
+.profile-avatar-section {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.profile-avatar {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.profile-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.profile-avatar-placeholder {
+  width: 100%;
+  height: 100%;
+  background: #166534;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.8rem;
+  font-weight: 700;
+}
+
+.profile-avatar-upload {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.profile-avatar-hint {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.profile-handicap {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #166534;
+}
+
+/* ─── Score Page Header with Avatar ────────────────────────────────────────── */
+.score-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+.score-header h2 {
+  margin: 0;
+}
+
+.score-header-avatar {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f0fdf4;
+  border: 2px solid #166534;
+}
+
+.score-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.score-avatar-default {
+  font-size: 1.6rem;
+}
+
+/* ─── Tee Time Grid ────────────────────────────────────────────────────────── */
+.tee-time-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tee-time-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #f8fafc;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 14px;
+}
+
+.tee-time-label {
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: #166534;
+  min-width: 80px;
+  flex-shrink: 0;
+}
+
+.tee-time-slots {
+  display: flex;
+  gap: 8px;
+  flex: 1;
+}
+
+.tee-slot {
+  flex: 1;
+  min-width: 120px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  text-align: center;
+  cursor: grab;
+  transition: background 0.15s, border-color 0.15s;
+  border: 2px solid transparent;
+}
+
+.tee-slot.filled {
+  background: #dcfce7;
+  border-color: #bbf7d0;
+  color: #166534;
+  font-weight: 500;
+}
+
+.tee-slot.filled:active {
+  cursor: grabbing;
+  opacity: 0.7;
+}
+
+.tee-slot.empty {
+  background: #fff;
+  border: 2px dashed #cbd5e1;
+  color: #94a3b8;
+  cursor: default;
+}
+
+.tee-slot.drop-target:hover {
+  border-color: #166534;
+  background: #f0fdf4;
+}
+
+.tee-slot-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+}
+
+.tee-slot-empty {
+  font-style: italic;
+}
+
+/* ─── Start Time Adjuster ──────────────────────────────────────────────────── */
+.start-time-adjuster {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.start-time-display {
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: #166534;
+  min-width: 80px;
+  text-align: center;
+}
+
+/* ─── Tee Actions (PDF/Email buttons) ──────────────────────────────────────── */
+.tee-actions {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.tee-bottom-actions {
+  margin-top: 12px;
+  display: flex;
+  gap: 8px;
+}
+
+/* ─── Print styles for PDF export ──────────────────────────────────────────── */
+@media print {
+  .golf-navbar, .leaderboard-tabs, .weekly-controls,
+  .start-time-adjuster, .tee-actions, .tee-bottom-actions,
+  .btn, button { display: none !important; }
+
+  .golf-app, .golf-page, .leaderboard-tab-content {
+    background: #fff !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+  }
+
+  .tee-time-grid { gap: 4px; }
+  .tee-time-row { padding: 6px 10px; }
+  .tee-slot { border: 1px solid #ccc !important; }
+
+  .par-info-banner { display: block !important; margin-bottom: 12px; }
+}
+
+/* ─── Photo Gallery ────────────────────────────────────────────────────────── */
+.photo-gallery-section {
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 1px solid var(--border);
+}
+
+.photo-gallery-section h3 {
+  color: #166534;
+  margin-bottom: 16px;
+}
+
+.photo-upload-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.photo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.photo-card {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+}
+
+.photo-img {
+  width: 100%;
+  height: 140px;
+  object-fit: cover;
+  display: block;
+}
+
+.photo-meta {
+  padding: 8px 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.photo-caption {
+  font-size: 0.8rem;
+  color: var(--text);
+  margin: 0;
+  flex: 1;
+}
+
+.photo-expires {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  background: #f1f5f9;
+  padding: 2px 6px;
+  border-radius: 8px;
+}
+
+/* ─── Photo Author ─────────────────────────────────────────────────────────── */
+.photo-author {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #166534;
+}
+
+/* ─── Nav Badge ────────────────────────────────────────────────────────────── */
+.nav-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #ef4444;
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 700;
+  min-width: 16px;
+  height: 16px;
+  border-radius: 8px;
+  padding: 0 4px;
+  margin-left: 4px;
+  vertical-align: top;
+}
+
+/* ─── Pending Photo Card ───────────────────────────────────────────────────── */
+.photo-pending {
+  border-color: #fbbf24;
+  opacity: 0.85;
+}
+
+.photo-pending-badge {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  background: #fef3c7;
+  color: #92400e;
+  padding: 2px 6px;
+  border-radius: 8px;
+}
+
+/* ─── Nav Notification Link ────────────────────────────────────────────────── */
+.nav-notification-link {
+  color: #fbbf24 !important;
+  font-size: 0.8rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  animation: pulse-glow 2s infinite;
+}
+
+@keyframes pulse-glow {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+/* ─── Pending Photos Section ───────────────────────────────────────────────── */
+.pending-photos-section {
+  background: #fffbeb;
+  border: 1px solid #fbbf24;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 24px;
+}
+
+.pending-photos-section h3 {
+  color: #92400e;
+  margin-bottom: 12px;
+  font-size: 1rem;
+}
+
+.photo-approval-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+/* ─── Photo Lightbox ───────────────────────────────────────────────────────── */
+.photo-clickable {
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.photo-clickable:hover {
+  opacity: 0.85;
+}
+
+.lightbox-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  cursor: pointer;
+}
+
+.lightbox-content {
+  position: relative;
+  max-width: 90vw;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: default;
+}
+
+.lightbox-close {
+  position: absolute;
+  top: -12px;
+  right: -12px;
+  background: #fff;
+  border: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  font-size: 1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  z-index: 1;
+}
+
+.lightbox-close:hover {
+  background: #f1f5f9;
+}
+
+.lightbox-img {
+  max-width: 100%;
+  max-height: 80vh;
+  border-radius: 8px;
+  object-fit: contain;
+}
+
+.lightbox-caption {
+  color: #fff;
+  margin-top: 12px;
+  font-size: 0.95rem;
+  text-align: center;
+}
+
+.lightbox-author {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.8rem;
+  margin-top: 4px;
+}
+
+/* ─── Contact Admin Section ────────────────────────────────────────────────── */
+.contact-admin-section {
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 1px solid var(--border);
+}
+
+.contact-admin-section h3 {
+  color: #166534;
+  margin-bottom: 12px;
+}
+
+.contact-form textarea {
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 0.95rem;
+  resize: vertical;
+  font-family: inherit;
+}
+
+.contact-form textarea:focus {
+  outline: none;
+  border-color: #166534;
+  box-shadow: 0 0 0 3px rgba(22, 101, 52, 0.1);
+}
+
+/* ─── Messages List ────────────────────────────────────────────────────────── */
+.messages-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.message-item {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.message-item.unread {
+  border-color: #166534;
+  background: #f0fdf4;
+}
+
+.message-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.message-header:hover {
+  background: #f8fafc;
+}
+
+.message-from {
+  font-weight: 600;
+  font-size: 0.85rem;
+  min-width: 120px;
+}
+
+.message-subject {
+  flex: 1;
+  font-size: 0.85rem;
+  color: var(--text);
+}
+
+.message-date {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.message-unread-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #166534;
+  flex-shrink: 0;
+}
+
+.message-body-section {
+  padding: 12px 14px;
+  border-top: 1px solid var(--border);
+  background: #fff;
+}
+
+.message-body-text {
+  font-size: 0.9rem;
+  line-height: 1.6;
+  margin: 0 0 10px;
+  white-space: pre-wrap;
+}
+
+.message-actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   WAGL Splash / Landing Page
+   ═══════════════════════════════════════════════════════════════════════════════ */
+
+.splash-page {
+  min-height: 100vh;
+  background: #f0fdf4;
+}
+
+/* ─── Splash Header ────────────────────────────────────────────────────────── */
+.splash-header {
+  background: #166534;
+  padding: 0 24px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.splash-header-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.splash-logo {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: 0.02em;
+}
+
+.splash-nav {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.splash-nav-link {
+  color: rgba(255, 255, 255, 0.8);
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  transition: background 0.15s, color 0.15s;
+}
+
+.splash-nav-link:hover,
+.splash-nav-link.active {
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+}
+
+.splash-login-btn {
+  background: #fff;
+  color: #166534 !important;
+  font-weight: 600;
+  border-radius: 20px;
+  padding: 6px 16px;
+}
+
+.splash-login-btn:hover {
+  background: #dcfce7 !important;
+}
+
+/* ─── Hero Section ─────────────────────────────────────────────────────────── */
+.splash-hero {
+  background: linear-gradient(135deg, #14532d 0%, #166534 40%, #15803d 100%);
+  padding: 80px 24px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.splash-hero::before {
+  content: '⛳';
+  position: absolute;
+  font-size: 20rem;
+  opacity: 0.05;
+  top: -40px;
+  right: -40px;
+}
+
+.splash-hero-overlay {
+  max-width: 700px;
+  margin: 0 auto;
+  position: relative;
+  z-index: 1;
+}
+
+.splash-title {
+  font-size: 3rem;
+  font-weight: 800;
+  color: #fff;
+  margin-bottom: 12px;
+  letter-spacing: -0.02em;
+}
+
+.splash-subtitle {
+  font-size: 1.3rem;
+  color: rgba(255, 255, 255, 0.9);
+  margin-bottom: 8px;
+}
+
+.splash-tagline {
+  font-size: 1rem;
+  color: rgba(255, 255, 255, 0.7);
+  margin-bottom: 32px;
+}
+
+.splash-cta {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.splash-btn {
+  padding: 12px 28px;
+  font-size: 1rem;
+  border-radius: 24px;
+}
+
+.splash-btn-lg {
+  padding: 14px 36px;
+  font-size: 1.1rem;
+  border-radius: 28px;
+}
+
+/* ─── Features Grid ────────────────────────────────────────────────────────── */
+.splash-features {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 60px 24px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 24px;
+}
+
+.splash-feature {
+  background: #fff;
+  border-radius: 12px;
+  padding: 28px 20px;
+  text-align: center;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+}
+
+.splash-feature-icon {
+  font-size: 2.5rem;
+  display: block;
+  margin-bottom: 12px;
+}
+
+.splash-feature h3 {
+  color: #166534;
+  margin-bottom: 8px;
+  font-size: 1.1rem;
+}
+
+.splash-feature p {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+/* ─── Courses Section ──────────────────────────────────────────────────────── */
+.splash-courses {
+  background: #fff;
+  padding: 60px 24px;
+  text-align: center;
+}
+
+.splash-courses h2 {
+  color: #166534;
+  font-size: 1.8rem;
+  margin-bottom: 8px;
+}
+
+.splash-courses-sub {
+  color: var(--text-muted);
+  margin-bottom: 32px;
+}
+
+.splash-course-grid {
+  max-width: 700px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  text-align: left;
+}
+
+.splash-course-card {
+  background: #f0fdf4;
+  border-radius: 10px;
+  padding: 20px;
+}
+
+.splash-course-card h4 {
+  color: #166534;
+  margin-bottom: 10px;
+  font-size: 1rem;
+}
+
+.splash-course-card ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.splash-course-card li {
+  padding: 4px 0;
+  font-size: 0.9rem;
+  color: var(--text);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.splash-course-card li:last-child {
+  border-bottom: none;
+}
+
+/* ─── Season Section ───────────────────────────────────────────────────────── */
+.splash-season {
+  padding: 60px 24px;
+  text-align: center;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.splash-season h2 {
+  color: #166534;
+  font-size: 1.8rem;
+  margin-bottom: 12px;
+}
+
+.splash-season p {
+  color: var(--text-muted);
+  margin-bottom: 24px;
+}
+
+/* ─── Splash Footer ───────────────────────────────────────────────────────── */
+.splash-footer {
+  background: #14532d;
+  color: rgba(255, 255, 255, 0.7);
+  padding: 24px;
+  text-align: center;
+  font-size: 0.85rem;
+}
+
+.splash-footer-links {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  margin-top: 8px;
+}
+
+.splash-footer-links a {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.8rem;
+}
+
+.splash-footer-links a:hover {
+  color: #fff;
+}
+
+/* ─── Content Pages (About, Contact, Join) ─────────────────────────────────── */
+.splash-content-page {
+  max-width: 700px;
+  margin: 0 auto;
+  padding: 48px 24px;
+}
+
+.splash-content-page h1 {
+  color: #166534;
+  font-size: 2rem;
+  margin-bottom: 16px;
+}
+
+.splash-content-page h2 {
+  color: #166534;
+  font-size: 1.3rem;
+  margin-top: 32px;
+  margin-bottom: 12px;
+}
+
+.splash-content-page p {
+  line-height: 1.7;
+  margin-bottom: 12px;
+  color: var(--text);
+}
+
+.splash-content-page ul {
+  padding-left: 20px;
+  margin-bottom: 16px;
+}
+
+.splash-content-page li {
+  line-height: 1.8;
+  color: var(--text);
+}
+
+/* ─── Contact Cards ────────────────────────────────────────────────────────── */
+.contact-info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin: 24px 0;
+}
+
+.contact-card {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 20px;
+}
+
+.contact-card h3 {
+  margin-bottom: 8px;
+  font-size: 1rem;
+}
+
+.contact-card p {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+/* ─── Join Steps ───────────────────────────────────────────────────────────── */
+.join-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin: 24px 0;
+}
+
+.join-step {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px 20px;
+}
+
+.join-step-num {
+  background: #166534;
+  color: #fff;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.9rem;
+  flex-shrink: 0;
+}
+
+.join-step h3 {
+  margin: 0 0 4px;
+  font-size: 1rem;
+  color: #166534;
+}
+
+.join-step p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+.join-cta {
+  text-align: center;
+  margin-top: 32px;
+  padding: 32px;
+  background: #f0fdf4;
+  border-radius: 12px;
+}
+
+.join-cta-note {
+  margin-top: 12px;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.join-cta-note a {
+  color: #166534;
+  font-weight: 600;
 }

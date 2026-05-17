@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { submitScore, submitRsvp, getCourses } from '../api/golfApi'
+import { submitScore, submitRsvp, getMyRsvp, getMyProfile, getCourses } from '../api/golfApi'
 import { getMostRecentEvent, getFollowingWeekEvent, COURSE_NAME_MAP, formatEventDate } from '../utils/waglSchedule'
 
 export default function GolfScoreForm({ onScoreSubmitted }) {
@@ -12,17 +12,36 @@ export default function GolfScoreForm({ onScoreSubmitted }) {
   const [success, setSuccess] = useState('')
   const [courses, setCourses] = useState([])
   const [playingNextWeek, setPlayingNextWeek] = useState(null) // null | 'yes' | 'no'
+  const [rsvpLocked, setRsvpLocked] = useState(false) // true if already RSVP'd yes
+  const [avatar, setAvatar] = useState(null)
 
   // Next week's event info
   const followingWeekEvent = getFollowingWeekEvent()
+
+  // Check existing RSVP on load
+  useEffect(() => {
+    if (!followingWeekEvent) return
+    getMyRsvp(followingWeekEvent.date)
+      .then(data => {
+        if (data.response) {
+          setPlayingNextWeek(data.response)
+          if (data.response === 'yes') {
+            setRsvpLocked(true)
+          }
+        }
+      })
+      .catch(() => {})
+  }, [])
 
   async function handleRsvp(response) {
     setPlayingNextWeek(response)
     if (followingWeekEvent) {
       try {
         await submitRsvp(followingWeekEvent.date, followingWeekEvent.course, response)
+        if (response === 'yes') {
+          setRsvpLocked(true)
+        }
       } catch (e) {
-        // Silently fail — RSVP is non-critical
         console.error('RSVP save failed:', e)
       }
     }
@@ -44,6 +63,11 @@ export default function GolfScoreForm({ onScoreSubmitted }) {
           }
         }
       })
+      .catch(() => {})
+
+    // Fetch user avatar
+    getMyProfile()
+      .then(data => setAvatar(data.avatar || null))
       .catch(() => {})
   }, [])
 
@@ -84,7 +108,16 @@ export default function GolfScoreForm({ onScoreSubmitted }) {
 
   return (
     <div className="golf-page">
-      <h2>🏌️ Submit Score</h2>
+      <div className="score-header">
+        <div className="score-header-avatar">
+          {avatar ? (
+            <img src={avatar} alt="Avatar" className="score-avatar-img" />
+          ) : (
+            <span className="score-avatar-default">🏌️</span>
+          )}
+        </div>
+        <h2>Submit Score</h2>
+      </div>
       <div className="golf-auth-card">
         <form onSubmit={handleSubmit} className="golf-form">
 
@@ -109,7 +142,7 @@ export default function GolfScoreForm({ onScoreSubmitted }) {
               <optgroup key={county} label={`${county} County`}>
                 {list.map(c => (
                   <option key={c.id} value={c.id}>
-                    {c.name} ({c.holes}h)
+                    {c.name}
                   </option>
                 ))}
               </optgroup>
@@ -187,15 +220,16 @@ export default function GolfScoreForm({ onScoreSubmitted }) {
             </p>
             <p className="next-week-question">Will you be playing?</p>
             <div className="nine-radio-group">
-              <label className={`nine-radio-option${playingNextWeek === 'yes' ? ' selected' : ''}`}>
+              <label className={`nine-radio-option${playingNextWeek === 'yes' ? ' selected' : ''}${rsvpLocked ? ' disabled' : ''}`}>
                 <input
                   type="radio"
                   name="nextweek"
                   value="yes"
                   checked={playingNextWeek === 'yes'}
                   onChange={() => handleRsvp('yes')}
+                  disabled={rsvpLocked}
                 />
-                <span>Yes, I'm in</span>
+                <span>{rsvpLocked && playingNextWeek === 'yes' ? "✓ You're confirmed" : "Yes, I'm in"}</span>
               </label>
               <label className={`nine-radio-option${playingNextWeek === 'no' ? ' selected' : ''}`}>
                 <input
@@ -203,7 +237,7 @@ export default function GolfScoreForm({ onScoreSubmitted }) {
                   name="nextweek"
                   value="no"
                   checked={playingNextWeek === 'no'}
-                  onChange={() => handleRsvp('no')}
+                  onChange={() => { setRsvpLocked(false); handleRsvp('no') }}
                 />
                 <span>No, sitting out</span>
               </label>

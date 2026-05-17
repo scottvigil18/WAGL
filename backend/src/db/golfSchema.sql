@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS players (
   phone         TEXT    NOT NULL DEFAULT '',
   role          TEXT    NOT NULL DEFAULT 'player' CHECK(role IN ('player', 'admin')),
   archived      INTEGER NOT NULL DEFAULT 0,
+  avatar        TEXT    DEFAULT NULL,
   created_at    TEXT    NOT NULL DEFAULT (datetime('now'))
 );
 
@@ -60,3 +61,29 @@ CREATE TABLE IF NOT EXISTS rsvps (
 );
 
 CREATE INDEX IF NOT EXISTS idx_rsvps_event ON rsvps(event_date);
+
+-- Photos table
+CREATE TABLE IF NOT EXISTS photos (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  player_id   INTEGER NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+  filename    TEXT    NOT NULL,
+  caption     TEXT    DEFAULT '',
+  approved    INTEGER NOT NULL DEFAULT 0,
+  created_at  TEXT    NOT NULL DEFAULT (datetime('now')),
+  expires_at  TEXT    NOT NULL DEFAULT (datetime('now', '+30 days'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_photos_player ON photos(player_id);
+CREATE INDEX IF NOT EXISTS idx_photos_expires ON photos(expires_at);
+
+-- Messages table
+CREATE TABLE IF NOT EXISTS messages (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  player_id   INTEGER NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+  subject     TEXT    NOT NULL,
+  body        TEXT    NOT NULL,
+  read        INTEGER NOT NULL DEFAULT 0,
+  created_at  TEXT    NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_messages_read ON messages(read);

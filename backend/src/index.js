@@ -7,6 +7,7 @@ const cartRoutes = require('./routes/cart');
 const golfAuthRoutes = require('./routes/golfAuth');
 const golfScoreRoutes = require('./routes/golfScores');
 const golfAdminRoutes = require('./routes/golfAdmin');
+const golfPhotoRoutes = require('./routes/golfPhotos');
 const { seedAdmin, seedCourses } = require('./db/golfSeed');
 
 const app = express();
@@ -29,6 +30,7 @@ app.use('/api/cart', cartRoutes);
 app.use('/api/golf', golfAuthRoutes);
 app.use('/api/golf', golfScoreRoutes);
 app.use('/api/golf/admin', golfAdminRoutes);
+app.use('/api/golf/photos', golfPhotoRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

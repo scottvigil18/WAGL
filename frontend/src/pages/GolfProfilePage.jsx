@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react'
-import { getMyProfile, updateMyProfile } from '../api/golfApi'
+import { useState, useEffect, useRef } from 'react'
+import { getMyProfile, updateMyProfile, uploadAvatar, sendMessageToAdmin } from '../api/golfApi'
 import { formatPhoneInput, formatPhoneDisplay } from '../utils/formatPhone'
+import PhotoGallery from '../components/PhotoGallery'
 
 export default function GolfProfilePage() {
   const [profile, setProfile] = useState(null)
@@ -10,6 +11,8 @@ export default function GolfProfilePage() {
   const [fields, setFields] = useState({})
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState('')
+  const [uploading, setUploading] = useState(false)
+  const fileRef = useRef()
 
   useEffect(() => {
     async function load() {
@@ -40,11 +43,24 @@ export default function GolfProfilePage() {
     setMsg('')
     try {
       const updated = await updateMyProfile(fields)
-      setProfile(updated)
+      setProfile(prev => ({ ...prev, ...updated }))
       setEditing(false)
       setMsg('Profile updated successfully.')
     } catch (e) { setMsg(e.message) }
     finally { setSaving(false) }
+  }
+
+  async function handleAvatarChange(e) {
+    const file = e.target.files[0]
+    if (!file) return
+    setUploading(true)
+    setMsg('')
+    try {
+      const result = await uploadAvatar(file)
+      setProfile(prev => ({ ...prev, avatar: result.avatar }))
+      setMsg('Avatar updated.')
+    } catch (e) { setMsg(e.message) }
+    finally { setUploading(false) }
   }
 
   if (loading) return <div className="golf-page"><p className="golf-loading">Loading profile…</p></div>
@@ -54,6 +70,35 @@ export default function GolfProfilePage() {
     <div className="golf-page">
       <h2>👤 My Profile</h2>
       <div className="profile-card">
+        <div className="profile-avatar-section">
+          <div className="profile-avatar">
+            {profile.avatar ? (
+              <img src={profile.avatar} alt="Avatar" className="profile-avatar-img" />
+            ) : (
+              <div className="profile-avatar-placeholder">
+                {(profile.first_name || profile.username || '?')[0].toUpperCase()}
+              </div>
+            )}
+          </div>
+          <div className="profile-avatar-upload">
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/*"
+              onChange={handleAvatarChange}
+              style={{ display: 'none' }}
+            />
+            <button
+              className="btn btn-small btn-secondary"
+              onClick={() => fileRef.current?.click()}
+              disabled={uploading}
+            >
+              {uploading ? 'Uploading…' : 'Change Photo'}
+            </button>
+            <span className="profile-avatar-hint">JPG, PNG, GIF — max 2 MB</span>
+          </div>
+        </div>
+
         {!editing ? (
           <>
             <div className="profile-grid">
@@ -76,6 +121,12 @@ export default function GolfProfilePage() {
               <div className="profile-field">
                 <span className="profile-label">Phone</span>
                 <span className="profile-value">{formatPhoneDisplay(profile.phone)}</span>
+              </div>
+              <div className="profile-field">
+                <span className="profile-label">Handicap Index</span>
+                <span className="profile-value profile-handicap">
+                  {profile.handicap_index != null ? profile.handicap_index.toFixed(1) : '—'}
+                </span>
               </div>
               <div className="profile-field">
                 <span className="profile-label">Member Since</span>
@@ -142,6 +193,74 @@ export default function GolfProfilePage() {
           </form>
         )}
       </div>
+
+      {profile && <PhotoGallery playerId={profile.id} canUpload={false} />}
+
+      {/* Contact Admin */}
+      {profile && profile.role !== 'admin' && <ContactAdminForm />}
+    </div>
+  )
+}
+
+function ContactAdminForm() {
+  const [subject, setSubject] = useState('')
+  const [body, setBody] = useState('')
+  const [sending, setSending] = useState(false)
+  const [msg, setMsg] = useState('')
+  const [showForm, setShowForm] = useState(false)
+
+  async function handleSend(e) {
+    e.preventDefault()
+    setSending(true)
+    setMsg('')
+    try {
+      await sendMessageToAdmin(subject, body)
+      setMsg('Message sent to admin!')
+      setSubject('')
+      setBody('')
+      setShowForm(false)
+    } catch (e) { setMsg(e.message) }
+    finally { setSending(false) }
+  }
+
+  return (
+    <div className="contact-admin-section">
+      <h3>✉️ Contact Admin</h3>
+      {!showForm ? (
+        <button className="btn btn-secondary" onClick={() => setShowForm(true)}>
+          Send a Message to Admin
+        </button>
+      ) : (
+        <form onSubmit={handleSend} className="golf-form contact-form">
+          <label htmlFor="msg-subject">Subject</label>
+          <input
+            id="msg-subject"
+            type="text"
+            value={subject}
+            onChange={e => setSubject(e.target.value)}
+            placeholder="What's this about?"
+            required
+          />
+          <label htmlFor="msg-body">Message</label>
+          <textarea
+            id="msg-body"
+            value={body}
+            onChange={e => setBody(e.target.value)}
+            placeholder="Type your message here…"
+            required
+            rows={4}
+          />
+          <div className="profile-form-actions">
+            <button type="submit" className="btn btn-primary" disabled={sending}>
+              {sending ? 'Sending…' : 'Send Message'}
+            </button>
+            <button type="button" className="btn btn-secondary" onClick={() => setShowForm(false)}>
+              Cancel
+            </button>
+          </div>
+        </form>
+      )}
+      {msg && <p className={msg.includes('sent') ? 'golf-success' : 'golf-error'}>{msg}</p>}
     </div>
   )
 }

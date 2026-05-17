@@ -371,6 +371,70 @@ router.delete('/scores/:id', async (req, res) => {
   }
 });
 
+// ─── Messages ─────────────────────────────────────────────────────────────────
+
+/**
+ * GET /api/golf/admin/messages
+ * List all messages, newest first.
+ */
+router.get('/messages', (req, res) => {
+  try {
+    const messages = golfDb.prepare(`
+      SELECT m.id, m.player_id, p.username, p.first_name, p.last_name,
+             m.subject, m.body, m.read, m.created_at
+      FROM messages m
+      JOIN players p ON m.player_id = p.id
+      ORDER BY m.read ASC, m.created_at DESC
+    `).all();
+    return res.json(messages);
+  } catch (err) {
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * GET /api/golf/admin/messages/unread-count
+ * Count of unread messages.
+ */
+router.get('/messages/unread-count', (req, res) => {
+  try {
+    const result = golfDb.prepare('SELECT COUNT(*) AS count FROM messages WHERE read = 0').get();
+    return res.json({ count: result.count });
+  } catch (err) {
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * POST /api/golf/admin/messages/:id/read
+ * Mark a message as read.
+ */
+router.post('/messages/:id/read', (req, res) => {
+  try {
+    const msgId = parseInt(req.params.id, 10);
+    if (isNaN(msgId)) return res.status(400).json({ error: 'Invalid message ID' });
+    golfDb.prepare('UPDATE messages SET read = 1 WHERE id = ?').run(msgId);
+    return res.json({ message: 'Marked as read' });
+  } catch (err) {
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * DELETE /api/golf/admin/messages/:id
+ * Delete a message.
+ */
+router.delete('/messages/:id', (req, res) => {
+  try {
+    const msgId = parseInt(req.params.id, 10);
+    if (isNaN(msgId)) return res.status(400).json({ error: 'Invalid message ID' });
+    golfDb.prepare('DELETE FROM messages WHERE id = ?').run(msgId);
+    return res.json({ message: 'Message deleted' });
+  } catch (err) {
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // ─── RSVPs ────────────────────────────────────────────────────────────────────
 
 /**

@@ -3,15 +3,14 @@ import {
   adminGetPlayers, adminUpdatePlayer, adminDeletePlayer,
   adminArchivePlayer, adminUnarchivePlayer,
   adminGetScores, adminAddScore, adminUpdateScore, adminDeleteScore,
-  adminImportCsv, adminGetRsvps, getCourses,
+  adminImportCsv, adminGetMessages, adminMarkMessageRead, adminDeleteMessage, getCourses,
 } from '../api/golfApi'
 import { formatPhoneInput, formatPhoneDisplay } from '../utils/formatPhone'
-import { WAGL_SCHEDULE, formatEventDate } from '../utils/waglSchedule'
 
-const TABS = ['Players', 'Scores', 'RSVPs', 'CSV Import']
+const TABS = ['Players', 'Scores', 'Messages', 'CSV Import']
 
 export default function GolfAdminPage() {
-  const [activeTab, setActiveTab] = useState('Scores')
+  const [activeTab, setActiveTab] = useState('Players')
 
   return (
     <div className="golf-page admin-page">
@@ -30,7 +29,7 @@ export default function GolfAdminPage() {
       <div className="admin-tab-content">
         {activeTab === 'Players'    && <PlayersTab />}
         {activeTab === 'Scores'     && <ScoresTab />}
-        {activeTab === 'RSVPs'      && <RsvpsTab />}
+        {activeTab === 'Messages'   && <MessagesTab />}
         {activeTab === 'CSV Import' && <CsvImportTab />}
       </div>
     </div>
@@ -51,6 +50,11 @@ function ScoresTab() {
   const [msg, setMsg] = useState('')
   const [showAddForm, setShowAddForm] = useState(false)
 
+  // Filters
+  const [filterPlayer, setFilterPlayer] = useState('')
+  const [filterCourse, setFilterCourse] = useState('')
+  const [filterDate, setFilterDate] = useState('')
+
   // Add score form state
   const [addFields, setAddFields] = useState({ player_id: '', score: '', holes: '18', date_played: '', course_id: '' })
   const [adding, setAdding] = useState(false)
@@ -68,6 +72,18 @@ function ScoresTab() {
     acc[c.county].push(c)
     return acc
   }, {})
+
+  // Apply filters
+  const filteredScores = scores.filter(s => {
+    if (filterPlayer && s.username !== filterPlayer) return false
+    if (filterCourse && (s.course_name || '') !== filterCourse) return false
+    if (filterDate && s.date_played !== filterDate) return false
+    return true
+  })
+
+  // Unique values for filter dropdowns
+  const uniquePlayers = [...new Set(scores.map(s => s.username))].sort()
+  const uniqueCourses = [...new Set(scores.map(s => s.course_name).filter(Boolean))].sort()
 
   async function handleAddScore(e) {
     e.preventDefault()
@@ -128,7 +144,7 @@ function ScoresTab() {
     <div>
       <div className="admin-section-header">
         <h3>All Scores</h3>
-        <span className="admin-count">{scores.length} records</span>
+        <span className="admin-count">{filteredScores.length} of {scores.length} records</span>
         <button
           className="btn btn-small btn-primary"
           style={{ marginLeft: 'auto' }}
@@ -136,6 +152,29 @@ function ScoresTab() {
         >
           {showAddForm ? 'Cancel' : '+ Add Score'}
         </button>
+      </div>
+
+      <div className="admin-filters">
+        <select value={filterPlayer} onChange={e => setFilterPlayer(e.target.value)} className="admin-inline-input">
+          <option value="">All Players</option>
+          {uniquePlayers.map(p => <option key={p} value={p}>{p}</option>)}
+        </select>
+        <select value={filterCourse} onChange={e => setFilterCourse(e.target.value)} className="admin-inline-input">
+          <option value="">All Courses</option>
+          {uniqueCourses.map(c => <option key={c} value={c}>{c}</option>)}
+        </select>
+        <input
+          type="date"
+          value={filterDate}
+          onChange={e => setFilterDate(e.target.value)}
+          className="admin-inline-input"
+          title="Filter by date"
+        />
+        {(filterPlayer || filterCourse || filterDate) && (
+          <button className="btn btn-small btn-secondary" onClick={() => { setFilterPlayer(''); setFilterCourse(''); setFilterDate('') }}>
+            Clear Filters
+          </button>
+        )}
       </div>
 
       {showAddForm && (
@@ -165,7 +204,7 @@ function ScoresTab() {
                 <option value="">Select course…</option>
                 {Object.entries(groupedCourses).map(([county, list]) => (
                   <optgroup key={county} label={`${county} County`}>
-                    {list.map(c => <option key={c.id} value={c.id}>{c.name} ({c.holes}h)</option>)}
+                    {list.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </optgroup>
                 ))}
               </select>
@@ -227,10 +266,10 @@ function ScoresTab() {
             </tr>
           </thead>
           <tbody>
-            {scores.length === 0 && (
+            {filteredScores.length === 0 && (
               <tr><td colSpan={6} className="golf-empty">No scores found.</td></tr>
             )}
-            {scores.map(s => (
+            {filteredScores.map(s => (
               <tr key={s.id}>
                 <td>{s.username}</td>
                 {editId === s.id ? (
@@ -269,7 +308,7 @@ function ScoresTab() {
                         {Object.entries(groupedCourses).map(([county, list]) => (
                           <optgroup key={county} label={`${county} County`}>
                             {list.map(c => (
-                              <option key={c.id} value={c.id}>{c.name} ({c.holes}h)</option>
+                              <option key={c.id} value={c.id}>{c.name}</option>
                             ))}
                           </optgroup>
                         ))}
@@ -509,103 +548,84 @@ function PlayersTab() {
   )
 }
 
-// ─── RSVPs Tab ────────────────────────────────────────────────────────────────
+// ─── Messages Tab ─────────────────────────────────────────────────────────────
 
-function RsvpsTab() {
-  const [selectedDate, setSelectedDate] = useState('')
-  const [rsvps, setRsvps] = useState([])
-  const [loading, setLoading] = useState(false)
+function MessagesTab() {
+  const [messages, setMessages] = useState([])
+  const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [expandedId, setExpandedId] = useState(null)
 
-  // Get upcoming events for the dropdown
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  const upcomingEvents = WAGL_SCHEDULE.filter(evt => new Date(evt.date + 'T00:00:00') >= today)
+  useEffect(() => { load() }, [])
 
-  useEffect(() => {
-    if (upcomingEvents.length > 0 && !selectedDate) {
-      setSelectedDate(upcomingEvents[0].date)
+  async function load() {
+    setLoading(true)
+    try { setMessages(await adminGetMessages()) }
+    catch (e) { setError(e.message) }
+    finally { setLoading(false) }
+  }
+
+  async function markRead(id) {
+    try {
+      await adminMarkMessageRead(id)
+      setMessages(prev => prev.map(m => m.id === id ? { ...m, read: 1 } : m))
+      window.dispatchEvent(new Event('messages-updated'))
+    } catch (e) { /* ignore */ }
+  }
+
+  async function deleteMsg(id) {
+    if (!confirm('Delete this message?')) return
+    try {
+      await adminDeleteMessage(id)
+      setMessages(prev => prev.filter(m => m.id !== id))
+      window.dispatchEvent(new Event('messages-updated'))
+    } catch (e) { /* ignore */ }
+  }
+
+  function toggleExpand(msg) {
+    if (expandedId === msg.id) {
+      setExpandedId(null)
+    } else {
+      setExpandedId(msg.id)
+      if (!msg.read) markRead(msg.id)
     }
-  }, [])
+  }
 
-  useEffect(() => {
-    if (!selectedDate) return
-    async function load() {
-      setLoading(true)
-      setError('')
-      try {
-        setRsvps(await adminGetRsvps(selectedDate))
-      } catch (e) { setError(e.message) }
-      finally { setLoading(false) }
-    }
-    load()
-  }, [selectedDate])
+  if (loading) return <p className="golf-loading">Loading messages…</p>
+  if (error) return <p className="golf-error">{error}</p>
 
-  const selectedEvent = WAGL_SCHEDULE.find(e => e.date === selectedDate)
-  const yesRsvps = rsvps.filter(r => r.response === 'yes')
-  const noRsvps = rsvps.filter(r => r.response === 'no')
+  const unread = messages.filter(m => !m.read).length
 
   return (
     <div>
       <div className="admin-section-header">
-        <h3>Player RSVPs</h3>
+        <h3>Member Messages</h3>
+        {unread > 0 && <span className="nav-badge">{unread}</span>}
+        <span className="admin-count">{messages.length} total</span>
       </div>
 
-      <div className="weekly-controls" style={{ marginBottom: 16 }}>
-        <label htmlFor="rsvp-week-select" className="weekly-label">Event:</label>
-        <select
-          id="rsvp-week-select"
-          className="weekly-select"
-          value={selectedDate}
-          onChange={e => setSelectedDate(e.target.value)}
-        >
-          {upcomingEvents.length === 0 && <option value="">No upcoming events</option>}
-          {upcomingEvents.map(evt => (
-            <option key={evt.date} value={evt.date}>
-              {formatEventDate(evt.date)} — {evt.course}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {error && <p className="golf-error">{error}</p>}
-
-      {selectedEvent && (
-        <div className="par-info-banner" style={{ marginBottom: 16 }}>
-          📅 <strong>{selectedEvent.course}</strong> — {formatEventDate(selectedEvent.date)} at {selectedEvent.time}
-        </div>
-      )}
-
-      {loading ? (
-        <p className="golf-loading">Loading RSVPs…</p>
-      ) : rsvps.length === 0 ? (
-        <p className="golf-empty">No RSVPs received for this event yet.</p>
+      {messages.length === 0 ? (
+        <p className="golf-empty">No messages.</p>
       ) : (
-        <div className="rsvp-columns">
-          <div className="rsvp-column rsvp-yes">
-            <h4>✅ Playing ({yesRsvps.length})</h4>
-            {yesRsvps.length === 0 ? (
-              <p className="golf-empty">None yet</p>
-            ) : (
-              <ul className="rsvp-list">
-                {yesRsvps.map(r => (
-                  <li key={r.id}>{r.first_name || r.username} {r.last_name || ''}</li>
-                ))}
-              </ul>
-            )}
-          </div>
-          <div className="rsvp-column rsvp-no">
-            <h4>❌ Sitting Out ({noRsvps.length})</h4>
-            {noRsvps.length === 0 ? (
-              <p className="golf-empty">None</p>
-            ) : (
-              <ul className="rsvp-list">
-                {noRsvps.map(r => (
-                  <li key={r.id}>{r.first_name || r.username} {r.last_name || ''}</li>
-                ))}
-              </ul>
-            )}
-          </div>
+        <div className="messages-list">
+          {messages.map(msg => (
+            <div key={msg.id} className={`message-item${!msg.read ? ' unread' : ''}`}>
+              <div className="message-header" onClick={() => toggleExpand(msg)}>
+                <span className="message-from">{msg.first_name || msg.username} {msg.last_name || ''}</span>
+                <span className="message-subject">{msg.subject}</span>
+                <span className="message-date">{msg.created_at ? msg.created_at.slice(0, 16).replace('T', ' ') : ''}</span>
+                {!msg.read && <span className="message-unread-dot" />}
+              </div>
+              {expandedId === msg.id && (
+                <div className="message-body-section">
+                  <p className="message-body-text">{msg.body}</p>
+                  <div className="message-actions">
+                    <button className="btn btn-small btn-danger" onClick={() => deleteMsg(msg.id)}>Delete</button>
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
         </div>
       )}
     </div>

@@ -17,6 +17,11 @@ import GolfAdminPage from './pages/GolfAdminPage'
 import GolfSchedulePage from './pages/GolfSchedulePage'
 import GolfProfilePage from './pages/GolfProfilePage'
 import GolfPlayerProfilePage from './pages/GolfPlayerProfilePage'
+import GolfPhotosPage from './pages/GolfPhotosPage'
+import GolfSplashPage from './pages/GolfSplashPage'
+import GolfAboutPage from './pages/GolfAboutPage'
+import GolfContactPage from './pages/GolfContactPage'
+import GolfJoinPage from './pages/GolfJoinPage'
 import { getUser, clearToken } from './api/golfApi'
 
 // Simple client-side router using hash-based navigation
@@ -38,7 +43,7 @@ export function navigate(to) {
 
 function GolfRedirect() {
   useEffect(() => {
-    window.location.hash = '#/golf/login'
+    window.location.hash = '#/golf/splash'
   }, [])
   return null
 }
@@ -72,16 +77,31 @@ export default function App() {
 
   function handleGolfLogin(user) {
     setGolfUser(user)
-    window.location.hash = '#/golf/leaderboard'
+    window.location.hash = user.role === 'admin' ? '#/golf/admin' : '#/golf/leaderboard'
   }
 
   function handleGolfLogout() {
     clearToken()
     setGolfUser(null)
+    window.location.hash = '#/golf/splash'
   }
 
   // Golf route matching
   if (path.startsWith('#/golf')) {
+    // Public splash pages (no auth required)
+    if (path === '#/golf/splash') {
+      return <GolfSplashPage />
+    }
+    if (path === '#/golf/about') {
+      return <GolfAboutPage />
+    }
+    if (path === '#/golf/contact') {
+      return <GolfContactPage />
+    }
+    if (path === '#/golf/join') {
+      return <GolfJoinPage />
+    }
+
     // Public golf routes
     if (path === '#/golf/login') {
       return (
@@ -112,6 +132,8 @@ export default function App() {
       golfPage = <GolfScoreHistoryPage user={golfUser} />
     } else if (path === '#/golf/schedule') {
       golfPage = <GolfSchedulePage />
+    } else if (path === '#/golf/photos') {
+      golfPage = <GolfPhotosPage />
     } else if (path === '#/golf/profile') {
       golfPage = <GolfProfilePage />
     } else if (path.startsWith('#/golf/player/')) {
@@ -132,13 +154,18 @@ export default function App() {
     )
   }
 
-  // Redirect root to golf login
+  // Redirect root to golf splash
   useEffect(() => {
     const hash = window.location.hash
     if (!hash || hash === '#' || hash === '#/') {
-      window.location.hash = '#/golf/login'
+      window.location.hash = '#/golf/splash'
     }
   }, [])
+
+  // If path is root, show the splash directly instead of returning null
+  if (path === '#/' || path === '#' || path === '' || !path) {
+    return <GolfSplashPage />
+  }
 
   // ShopMart route matching
   let page
@@ -147,9 +174,6 @@ export default function App() {
     page = <ProductPage productId={id} sessionId={sessionId} onCartChange={refreshCart} />
   } else if (path === '#/cart') {
     page = <CartPage cart={cart} sessionId={sessionId} onCartChange={refreshCart} cartLoading={cartLoading} />
-  } else if (path === '#/' || path === '#' || path === '') {
-    // Still waiting for redirect effect — render nothing visible
-    return null
   } else {
     page = <HomePage sessionId={sessionId} onCartChange={refreshCart} />
   }

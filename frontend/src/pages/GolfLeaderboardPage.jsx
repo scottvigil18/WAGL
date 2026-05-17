@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { getLeaderboard, getWeeks, getWeeklyLeaderboard } from '../api/golfApi'
+import { WAGL_SCHEDULE, isEventPlayed, formatEventDate } from '../utils/waglSchedule'
 
 const TABS = ['Season Standings', 'Weekly Scores']
 
@@ -7,7 +8,7 @@ export default function GolfLeaderboardPage() {
   const [activeTab, setActiveTab] = useState('Season Standings')
 
   return (
-    <div className="golf-page">
+    <div className="golf-page golf-page-wide">
       <div className="golf-page-header">
         <h2>🏆 Leaderboard</h2>
       </div>
@@ -110,110 +111,89 @@ function SeasonStandings() {
 // ─── Weekly Scores ────────────────────────────────────────────────────────────
 
 function WeeklyScores() {
-  const [weeks, setWeeks] = useState([])
-  const [selectedWeek, setSelectedWeek] = useState('')
+  const [selectedWeek, setSelectedWeek] = useState('all')
   const [scores, setScores] = useState([])
-  const [loadingWeeks, setLoadingWeeks] = useState(true)
-  const [loadingScores, setLoadingScores] = useState(false)
+  const [loadingScores, setLoadingScores] = useState(true)
   const [error, setError] = useState('')
 
-  useEffect(() => {
-    async function loadWeeks() {
-      setLoadingWeeks(true)
-      try {
-        const data = await getWeeks()
-        setWeeks(data)
-        if (data.length > 0) {
-          setSelectedWeek(data[0].week_start)
-        }
-      } catch (e) { setError(e.message) }
-      finally { setLoadingWeeks(false) }
-    }
-    loadWeeks()
-  }, [])
+  // All WAGL schedule events (past ones for filtering)
+  const today = new Date()
+  today.setHours(23, 59, 59, 999)
+  const playedEvents = WAGL_SCHEDULE.filter(evt => new Date(evt.date + 'T00:00:00') <= today)
 
   useEffect(() => {
-    if (!selectedWeek) return
-    async function loadScores() {
-      setLoadingScores(true)
-      setError('')
-      try { setScores(await getWeeklyLeaderboard(selectedWeek)) }
-      catch (e) { setError(e.message) }
-      finally { setLoadingScores(false) }
-    }
     loadScores()
   }, [selectedWeek])
 
-  const selectedLabel = weeks.find(w => w.week_start === selectedWeek)?.label || ''
+  async function loadScores() {
+    setLoadingScores(true)
+    setError('')
+    try {
+      if (selectedWeek === 'all') {
+        setScores(await getWeeklyLeaderboard(''))
+      } else {
+        setScores(await getWeeklyLeaderboard(selectedWeek))
+      }
+    } catch (e) { setError(e.message) }
+    finally { setLoadingScores(false) }
+  }
 
   return (
     <>
       <div className="weekly-controls">
-        <label htmlFor="week-select" className="weekly-label">Select Week:</label>
-        {loadingWeeks ? (
-          <span className="golf-loading">Loading weeks…</span>
-        ) : weeks.length === 0 ? (
-          <span className="golf-empty">No scored weeks yet.</span>
-        ) : (
-          <select
-            id="week-select"
-            className="weekly-select"
-            value={selectedWeek}
-            onChange={e => setSelectedWeek(e.target.value)}
-          >
-            {weeks.map(w => (
-              <option key={w.week_start} value={w.week_start}>{w.label}</option>
-            ))}
-          </select>
-        )}
+        <label htmlFor="week-select" className="weekly-label">Filter by Event:</label>
+        <select
+          id="week-select"
+          className="weekly-select"
+          value={selectedWeek}
+          onChange={e => setSelectedWeek(e.target.value)}
+        >
+          <option value="all">All Scores</option>
+          {[...playedEvents].reverse().map(evt => (
+            <option key={evt.date} value={evt.date}>
+              Event {evt.event} — {formatEventDate(evt.date)} — {evt.course}
+            </option>
+          ))}
+        </select>
       </div>
 
       {error && <p className="golf-error">{error}</p>}
 
-      {selectedWeek && (
-        <>
-          <h3 className="weekly-heading">{selectedLabel}</h3>
-          {loadingScores ? (
-            <p className="golf-loading">Loading scores…</p>
-          ) : scores.length === 0 ? (
-            <p className="golf-empty">No scores recorded for this week.</p>
-          ) : (
-            <div className="golf-table-wrap">
-              <table className="golf-table">
-                <thead>
-                  <tr>
-                    <th>Player</th>
-                    <th>Score</th>
-                    <th>Holes</th>
-                    <th>Course</th>
-                    <th>Course Rating</th>
-                    <th>Slope</th>
-                    <th>Date Played</th>
-                    <th>Weekly Points</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {scores.map((s, idx) => (
-                    <tr key={`${s.id}-${idx}`}>
-                      <td><strong>{s.username}</strong></td>
-                      <td>{s.score}</td>
-                      <td>{s.holes}</td>
-                      <td>{s.course_name ?? '—'}</td>
-                      <td>{s.course_rating ?? '—'}</td>
-                      <td>{s.slope_rating ?? '—'}</td>
-                      <td>{s.date_played}</td>
-                      <td>
-                        {s.weekly_points != null
-                          ? <span className="weekly-points-badge">{s.weekly_points}</span>
-                          : <span className="points-pending">TBD</span>}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </>
+      {loadingScores ? (
+        <p className="golf-loading">Loading scores…</p>
+      ) : scores.length === 0 ? (
+        <p className="golf-empty">No scores recorded yet.</p>
+      ) : (
+        <div className="golf-table-wrap">
+          <table className="golf-table">
+            <thead>
+              <tr>
+                <th>Player</th>
+                <th>Score</th>
+                <th>Holes</th>
+                <th>Course</th>
+                <th>Date Played</th>
+                <th>Weekly Points</th>
+              </tr>
+            </thead>
+            <tbody>
+              {scores.map((s, idx) => (
+                <tr key={`${s.id}-${idx}`}>
+                  <td><strong>{s.first_name || s.username} {s.last_name || ''}</strong></td>
+                  <td>{s.score}</td>
+                  <td>{s.holes}</td>
+                  <td>{s.course_name ?? '—'}</td>
+                  <td>{s.date_played}</td>
+                  <td>
+                    {s.weekly_points != null
+                      ? <span className="weekly-points-badge">{s.weekly_points}</span>
+                      : <span className="points-pending">TBD</span>}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </>
   )

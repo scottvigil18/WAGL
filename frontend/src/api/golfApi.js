@@ -72,6 +72,72 @@ export async function getPlayerProfile(playerId) {
   return data
 }
 
+export async function getPlayerPhotos(playerId) {
+  const res = await fetch(`/api/golf/photos/${playerId}`, { headers: authHeaders() })
+  const data = await res.json()
+  if (!res.ok) throw new Error(data.error || 'Failed to fetch photos')
+  return data
+}
+
+export async function getAllPhotos() {
+  const res = await fetch('/api/golf/photos/all/feed', { headers: authHeaders() })
+  const data = await res.json()
+  if (!res.ok) throw new Error(data.error || 'Failed to fetch photos')
+  return data
+}
+
+export async function uploadPhoto(file, caption) {
+  const formData = new FormData()
+  formData.append('photo', file)
+  if (caption) formData.append('caption', caption)
+  const token = getToken()
+  const res = await fetch('/api/golf/photos', {
+    method: 'POST',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: formData,
+  })
+  const data = await res.json()
+  if (!res.ok) throw new Error(data.error || 'Photo upload failed')
+  return data
+}
+
+export async function deletePhoto(photoId) {
+  const res = await fetch(`/api/golf/photos/${photoId}`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+  })
+  const data = await res.json()
+  if (!res.ok) throw new Error(data.error || 'Failed to delete photo')
+  return data
+}
+
+export async function getPendingPhotoCount() {
+  const res = await fetch('/api/golf/photos/pending/count', { headers: authHeaders() })
+  const data = await res.json()
+  if (!res.ok) return { count: 0 }
+  return data
+}
+
+export async function approvePhoto(photoId) {
+  const res = await fetch(`/api/golf/photos/${photoId}/approve`, {
+    method: 'POST',
+    headers: authHeaders(),
+  })
+  const data = await res.json()
+  if (!res.ok) throw new Error(data.error || 'Failed to approve photo')
+  return data
+}
+
+export async function rejectPhoto(photoId) {
+  const res = await fetch(`/api/golf/photos/${photoId}/reject`, {
+    method: 'POST',
+    headers: authHeaders(),
+  })
+  const data = await res.json()
+  if (!res.ok) throw new Error(data.error || 'Failed to reject photo')
+  return data
+}
+
 export async function getWeeks() {
   const res = await fetch('/api/golf/weeks')
   const data = await res.json()
@@ -80,7 +146,10 @@ export async function getWeeks() {
 }
 
 export async function getWeeklyLeaderboard(weekStart) {
-  const res = await fetch(`/api/golf/leaderboard/weekly?week=${encodeURIComponent(weekStart)}`)
+  const url = weekStart
+    ? `/api/golf/leaderboard/weekly?week=${encodeURIComponent(weekStart)}`
+    : '/api/golf/leaderboard/weekly'
+  const res = await fetch(url)
   const data = await res.json()
   if (!res.ok) throw new Error(data.error || 'Failed to fetch weekly scores')
   return data
@@ -113,6 +182,20 @@ export async function updateMyProfile(fields) {
   return data
 }
 
+export async function uploadAvatar(file) {
+  const formData = new FormData()
+  formData.append('avatar', file)
+  const token = getToken()
+  const res = await fetch('/api/golf/profile/avatar', {
+    method: 'POST',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: formData,
+  })
+  const data = await res.json()
+  if (!res.ok) throw new Error(data.error || 'Avatar upload failed')
+  return data
+}
+
 export async function submitScore(score, datePlayed, holes = 18, courseId = null) {
   const body = { score, date_played: datePlayed, holes }
   if (courseId) body.course_id = courseId
@@ -134,6 +217,15 @@ export async function submitRsvp(eventDate, courseName, response) {
   })
   const data = await res.json()
   if (!res.ok) throw new Error(data.error || 'Failed to save RSVP')
+  return data
+}
+
+export async function getMyRsvp(eventDate) {
+  const res = await fetch(`/api/golf/rsvp?event_date=${encodeURIComponent(eventDate)}`, {
+    headers: authHeaders(),
+  })
+  const data = await res.json()
+  if (!res.ok) throw new Error(data.error || 'Failed to fetch RSVP')
   return data
 }
 
@@ -267,5 +359,50 @@ export async function adminGetRsvps(eventDate) {
   const res = await fetch(url, { headers: authHeaders() })
   const data = await res.json()
   if (!res.ok) throw new Error(data.error || 'Failed to fetch RSVPs')
+  return data
+}
+
+export async function sendMessageToAdmin(subject, body) {
+  const res = await fetch('/api/golf/messages', {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ subject, body }),
+  })
+  const data = await res.json()
+  if (!res.ok) throw new Error(data.error || 'Failed to send message')
+  return data
+}
+
+export async function adminGetMessages() {
+  const res = await fetch('/api/golf/admin/messages', { headers: authHeaders() })
+  const data = await res.json()
+  if (!res.ok) throw new Error(data.error || 'Failed to fetch messages')
+  return data
+}
+
+export async function adminGetUnreadCount() {
+  const res = await fetch('/api/golf/admin/messages/unread-count', { headers: authHeaders() })
+  const data = await res.json()
+  if (!res.ok) return { count: 0 }
+  return data
+}
+
+export async function adminMarkMessageRead(id) {
+  const res = await fetch(`/api/golf/admin/messages/${id}/read`, {
+    method: 'POST',
+    headers: authHeaders(),
+  })
+  const data = await res.json()
+  if (!res.ok) throw new Error(data.error || 'Failed to mark as read')
+  return data
+}
+
+export async function adminDeleteMessage(id) {
+  const res = await fetch(`/api/golf/admin/messages/${id}`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+  })
+  const data = await res.json()
+  if (!res.ok) throw new Error(data.error || 'Failed to delete message')
   return data
 }

@@ -94,4 +94,20 @@ if (!hasArchived) {
   golfDb.exec("ALTER TABLE players ADD COLUMN archived INTEGER NOT NULL DEFAULT 0");
 }
 
+// Migration: add avatar column to players if it doesn't exist
+const playerColumns3 = golfDb.prepare("PRAGMA table_info(players)").all();
+const hasAvatar = playerColumns3.some(col => col.name === 'avatar');
+if (!hasAvatar) {
+  golfDb.exec("ALTER TABLE players ADD COLUMN avatar TEXT DEFAULT NULL");
+}
+
+// Migration: add approved column to photos if it doesn't exist
+try {
+  const photoCols = golfDb.prepare("PRAGMA table_info(photos)").all();
+  const hasApproved = photoCols.some(col => col.name === 'approved');
+  if (!hasApproved) {
+    golfDb.exec("ALTER TABLE photos ADD COLUMN approved INTEGER NOT NULL DEFAULT 0");
+  }
+} catch (e) { /* photos table may not exist yet — schema will create it */ }
+
 module.exports = golfDb;
