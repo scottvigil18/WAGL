@@ -145,6 +145,27 @@ export async function getWeeks() {
   return data
 }
 
+export async function getContestWinners(eventDate) {
+  const url = eventDate
+    ? `/api/golf/contest-winners?event_date=${encodeURIComponent(eventDate)}`
+    : '/api/golf/contest-winners'
+  const res = await fetch(url)
+  const data = await res.json()
+  if (!res.ok) throw new Error(data.error || 'Failed to fetch contest winners')
+  return data
+}
+
+export async function adminSaveContestWinner(eventDate, category, playerName, playerId, distance) {
+  const res = await fetch('/api/golf/admin/contest-winners', {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ event_date: eventDate, category, player_name: playerName, player_id: playerId, distance }),
+  })
+  const data = await res.json()
+  if (!res.ok) throw new Error(data.error || 'Failed to save contest winner')
+  return data
+}
+
 export async function getWeeklyLeaderboard(weekStart) {
   const url = weekStart
     ? `/api/golf/leaderboard/weekly?week=${encodeURIComponent(weekStart)}`
@@ -179,6 +200,17 @@ export async function updateMyProfile(fields) {
   })
   const data = await res.json()
   if (!res.ok) throw new Error(data.error || 'Failed to update profile')
+  return data
+}
+
+export async function changeMyPassword(currentPassword, newPassword) {
+  const res = await fetch('/api/golf/profile/password', {
+    method: 'PUT',
+    headers: authHeaders(),
+    body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }),
+  })
+  const data = await res.json()
+  if (!res.ok) throw new Error(data.error || 'Failed to change password')
   return data
 }
 
@@ -286,6 +318,16 @@ export async function adminArchivePlayer(id) {
   })
   const data = await res.json()
   if (!res.ok) throw new Error(data.error || 'Failed to archive player')
+  return data
+}
+
+export async function adminForcePasswordReset(id) {
+  const res = await fetch(`/api/golf/admin/players/${id}/force-reset`, {
+    method: 'POST',
+    headers: authHeaders(),
+  })
+  const data = await res.json()
+  if (!res.ok) throw new Error(data.error || 'Failed to force password reset')
   return data
 }
 
@@ -404,5 +446,52 @@ export async function adminDeleteMessage(id) {
   })
   const data = await res.json()
   if (!res.ok) throw new Error(data.error || 'Failed to delete message')
+  return data
+}
+
+export async function adminBroadcast(subject, body, playerId) {
+  const payload = { subject, body }
+  if (playerId) payload.player_id = playerId
+  const res = await fetch('/api/golf/admin/broadcast', {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify(payload),
+  })
+  const data = await res.json()
+  if (!res.ok) throw new Error(data.error || 'Failed to send broadcast')
+  return data
+}
+
+export async function getMyNotifications() {
+  const res = await fetch('/api/golf/notifications', { headers: authHeaders() })
+  const data = await res.json()
+  if (!res.ok) throw new Error(data.error || 'Failed to fetch notifications')
+  return data
+}
+
+export async function getUnreadNotificationCount() {
+  const res = await fetch('/api/golf/notifications/unread-count', { headers: authHeaders() })
+  const data = await res.json()
+  if (!res.ok) return { count: 0 }
+  return data
+}
+
+export async function markNotificationRead(id) {
+  const res = await fetch(`/api/golf/notifications/${id}/read`, {
+    method: 'POST',
+    headers: authHeaders(),
+  })
+  const data = await res.json()
+  if (!res.ok) throw new Error(data.error || 'Failed to mark as read')
+  return data
+}
+
+export async function deleteNotification(id) {
+  const res = await fetch(`/api/golf/notifications/${id}`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+  })
+  const data = await res.json()
+  if (!res.ok) throw new Error(data.error || 'Failed to delete notification')
   return data
 }

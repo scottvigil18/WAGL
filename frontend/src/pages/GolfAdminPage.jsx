@@ -1,16 +1,24 @@
 import { useState, useEffect, useRef } from 'react'
 import {
   adminGetPlayers, adminUpdatePlayer, adminDeletePlayer,
-  adminArchivePlayer, adminUnarchivePlayer,
+  adminArchivePlayer, adminUnarchivePlayer, adminForcePasswordReset,
   adminGetScores, adminAddScore, adminUpdateScore, adminDeleteScore,
-  adminImportCsv, adminGetMessages, adminMarkMessageRead, adminDeleteMessage, getCourses,
+  adminImportCsv, adminGetMessages, adminMarkMessageRead, adminDeleteMessage,
+  adminBroadcast, adminGetUnreadCount, getContestWinners, adminSaveContestWinner, getCourses,
 } from '../api/golfApi'
 import { formatPhoneInput, formatPhoneDisplay } from '../utils/formatPhone'
+import { WAGL_SCHEDULE, formatEventDate } from '../utils/waglSchedule'
 
-const TABS = ['Players', 'Scores', 'Messages', 'CSV Import']
+const TABS = ['Players', 'Scores', 'Contest Winners', 'Messages', 'CSV Import']
 
 export default function GolfAdminPage() {
   const [activeTab, setActiveTab] = useState('Players')
+
+  useEffect(() => {
+    adminGetUnreadCount().then(d => {
+      if (d.count > 0) setActiveTab('Messages')
+    }).catch(() => {})
+  }, [])
 
   return (
     <div className="golf-page admin-page">
@@ -27,10 +35,11 @@ export default function GolfAdminPage() {
         ))}
       </div>
       <div className="admin-tab-content">
-        {activeTab === 'Players'    && <PlayersTab />}
-        {activeTab === 'Scores'     && <ScoresTab />}
-        {activeTab === 'Messages'   && <MessagesTab />}
-        {activeTab === 'CSV Import' && <CsvImportTab />}
+        {activeTab === 'Players'         && <PlayersTab />}
+        {activeTab === 'Scores'          && <ScoresTab />}
+        {activeTab === 'Contest Winners' && <ContestWinnersTab />}
+        {activeTab === 'Messages'        && <MessagesTab />}
+        {activeTab === 'CSV Import'      && <CsvImportTab />}
       </div>
     </div>
   )
@@ -56,7 +65,7 @@ function ScoresTab() {
   const [filterDate, setFilterDate] = useState('')
 
   // Add score form state
-  const [addFields, setAddFields] = useState({ player_id: '', score: '', holes: '18', date_played: '', course_id: '' })
+  const [addFields, setAddFields] = useState({ player_id: '', score: '', holes: '9', date_played: '', course_id: '' })
   const [adding, setAdding] = useState(false)
 
   useEffect(() => {
@@ -98,7 +107,7 @@ function ScoresTab() {
         course_id: addFields.course_id ? parseInt(addFields.course_id, 10) : null,
       })
       setScores(prev => [created, ...prev])
-      setAddFields({ player_id: '', score: '', holes: '18', date_played: '', course_id: '' })
+      setAddFields({ player_id: '', score: '', holes: '9', date_played: '', course_id: '' })
       setShowAddForm(false)
       setMsg('Score added.')
     } catch (e) { setMsg(e.message) }
@@ -142,41 +151,6 @@ function ScoresTab() {
 
   return (
     <div>
-      <div className="admin-section-header">
-        <h3>All Scores</h3>
-        <span className="admin-count">{filteredScores.length} of {scores.length} records</span>
-        <button
-          className="btn btn-small btn-primary"
-          style={{ marginLeft: 'auto' }}
-          onClick={() => { setShowAddForm(v => !v); setMsg('') }}
-        >
-          {showAddForm ? 'Cancel' : '+ Add Score'}
-        </button>
-      </div>
-
-      <div className="admin-filters">
-        <select value={filterPlayer} onChange={e => setFilterPlayer(e.target.value)} className="admin-inline-input">
-          <option value="">All Players</option>
-          {uniquePlayers.map(p => <option key={p} value={p}>{p}</option>)}
-        </select>
-        <select value={filterCourse} onChange={e => setFilterCourse(e.target.value)} className="admin-inline-input">
-          <option value="">All Courses</option>
-          {uniqueCourses.map(c => <option key={c} value={c}>{c}</option>)}
-        </select>
-        <input
-          type="date"
-          value={filterDate}
-          onChange={e => setFilterDate(e.target.value)}
-          className="admin-inline-input"
-          title="Filter by date"
-        />
-        {(filterPlayer || filterCourse || filterDate) && (
-          <button className="btn btn-small btn-secondary" onClick={() => { setFilterPlayer(''); setFilterCourse(''); setFilterDate('') }}>
-            Clear Filters
-          </button>
-        )}
-      </div>
-
       {showAddForm && (
         <form onSubmit={handleAddScore} className="admin-add-score-form">
           <h4>Add Score for Player</h4>
@@ -220,17 +194,6 @@ function ScoresTab() {
               />
             </div>
             <div className="admin-field">
-              <label>Holes</label>
-              <select
-                className="admin-inline-input"
-                value={addFields.holes}
-                onChange={e => setAddFields(f => ({ ...f, holes: e.target.value }))}
-              >
-                <option value="9">9</option>
-                <option value="18">18</option>
-              </select>
-            </div>
-            <div className="admin-field">
               <label>Date Played</label>
               <input
                 type="date" required
@@ -250,6 +213,41 @@ function ScoresTab() {
           </div>
         </form>
       )}
+
+      <div className="admin-section-header">
+        <h3>All Scores</h3>
+        <span className="admin-count">{filteredScores.length} of {scores.length} records</span>
+        <button
+          className="btn btn-small btn-primary"
+          style={{ marginLeft: 'auto' }}
+          onClick={() => { setShowAddForm(v => !v); setMsg('') }}
+        >
+          {showAddForm ? 'Cancel' : '+ Add Score'}
+        </button>
+      </div>
+
+      <div className="admin-filters">
+        <select value={filterPlayer} onChange={e => setFilterPlayer(e.target.value)} className="admin-inline-input">
+          <option value="">All Players</option>
+          {uniquePlayers.map(p => <option key={p} value={p}>{p}</option>)}
+        </select>
+        <select value={filterCourse} onChange={e => setFilterCourse(e.target.value)} className="admin-inline-input">
+          <option value="">All Courses</option>
+          {uniqueCourses.map(c => <option key={c} value={c}>{c}</option>)}
+        </select>
+        <input
+          type="date"
+          value={filterDate}
+          onChange={e => setFilterDate(e.target.value)}
+          className="admin-inline-input"
+          title="Filter by date"
+        />
+        {(filterPlayer || filterCourse || filterDate) && (
+          <button className="btn btn-small btn-secondary" onClick={() => { setFilterPlayer(''); setFilterCourse(''); setFilterDate('') }}>
+            Clear Filters
+          </button>
+        )}
+      </div>
 
       {msg && <p className={msg.includes('dded') || msg.includes('pdat') || msg.includes('elet') ? 'golf-success' : 'golf-error'}>{msg}</p>}
 
@@ -398,6 +396,14 @@ function PlayersTab() {
     } catch (e) { setMsg(e.message) }
   }
 
+  async function forceReset(id, username) {
+    if (!confirm(`Force "${username}" to reset their password on next login?`)) return
+    try {
+      await adminForcePasswordReset(id)
+      setMsg(`Password reset forced for "${username}".`)
+    } catch (e) { setMsg(e.message) }
+  }
+
   async function unarchivePlayer(id, username) {
     if (!confirm(`Restore "${username}" to active status?`)) return
     try {
@@ -495,6 +501,7 @@ function PlayersTab() {
                     <td>{p.score_count}</td>
                     <td className="admin-actions">
                       <button className="btn btn-small btn-secondary" onClick={() => startEdit(p)}>Edit</button>
+                      <button className="btn btn-small btn-secondary" onClick={() => forceReset(p.id, p.username)} title="Force password reset">🔒</button>
                       <button className="btn btn-small btn-danger" onClick={() => archivePlayer(p.id, p.username)}>Archive</button>
                     </td>
                   </>
@@ -548,6 +555,138 @@ function PlayersTab() {
   )
 }
 
+// ─── Contest Winners Tab ──────────────────────────────────────────────────────
+
+function ContestWinnersTab() {
+  const [players, setPlayers] = useState([])
+  const [selectedDate, setSelectedDate] = useState('')
+  const [mensClosest, setMensClosest] = useState('')
+  const [womensClosest, setWomensClosest] = useState('')
+  const [longestPutt, setLongestPutt] = useState('')
+  const [mensDistance, setMensDistance] = useState('')
+  const [womensDistance, setWomensDistance] = useState('')
+  const [puttDistance, setPuttDistance] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [msg, setMsg] = useState('')
+  const [existingWinners, setExistingWinners] = useState([])
+
+  const today = new Date()
+  today.setHours(23, 59, 59, 999)
+  const playedEvents = WAGL_SCHEDULE.filter(evt => new Date(evt.date + 'T00:00:00') <= today)
+
+  useEffect(() => {
+    adminGetPlayers().then(p => setPlayers(p.filter(pl => pl.role === 'player' && !pl.archived))).catch(() => {})
+    if (playedEvents.length > 0) {
+      setSelectedDate(playedEvents[playedEvents.length - 1].date)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!selectedDate) return
+    getContestWinners(selectedDate).then(winners => {
+      setExistingWinners(winners)
+      const mc = winners.find(w => w.category === 'mens_closest')
+      const wc = winners.find(w => w.category === 'womens_closest')
+      const lp = winners.find(w => w.category === 'longest_putt')
+      setMensClosest(mc?.player_id ? String(mc.player_id) : '')
+      setWomensClosest(wc?.player_id ? String(wc.player_id) : '')
+      setLongestPutt(lp?.player_id ? String(lp.player_id) : '')
+      setMensDistance(mc?.distance || '')
+      setWomensDistance(wc?.distance || '')
+      setPuttDistance(lp?.distance || '')
+    }).catch(() => {})
+  }, [selectedDate])
+
+  function getPlayerName(id) {
+    const p = players.find(pl => String(pl.id) === String(id))
+    return p ? `${p.first_name || p.username} ${p.last_name || ''}`.trim() : ''
+  }
+
+  async function handleSave(e) {
+    e.preventDefault()
+    setSaving(true)
+    setMsg('')
+    try {
+      if (mensClosest) {
+        await adminSaveContestWinner(selectedDate, 'mens_closest', getPlayerName(mensClosest), parseInt(mensClosest, 10), mensDistance)
+      }
+      if (womensClosest) {
+        await adminSaveContestWinner(selectedDate, 'womens_closest', getPlayerName(womensClosest), parseInt(womensClosest, 10), womensDistance)
+      }
+      if (longestPutt) {
+        await adminSaveContestWinner(selectedDate, 'longest_putt', getPlayerName(longestPutt), parseInt(longestPutt, 10), puttDistance)
+      }
+      setMsg('Contest winners saved!')
+    } catch (e) { setMsg(e.message) }
+    finally { setSaving(false) }
+  }
+
+  const selectedEvent = WAGL_SCHEDULE.find(e => e.date === selectedDate)
+
+  return (
+    <div>
+      <div className="admin-section-header">
+        <h3>Set Contest Winners</h3>
+      </div>
+
+      <div className="weekly-controls" style={{ marginBottom: 16 }}>
+        <label className="weekly-label">Event:</label>
+        <select
+          className="weekly-select"
+          value={selectedDate}
+          onChange={e => setSelectedDate(e.target.value)}
+        >
+          {[...playedEvents].reverse().map(evt => (
+            <option key={evt.date} value={evt.date}>
+              Event {evt.event} — {formatEventDate(evt.date)} — {evt.course}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {selectedEvent && (
+        <div className="par-info-banner" style={{ marginBottom: 16 }}>
+          📅 <strong>{selectedEvent.course}</strong> — {formatEventDate(selectedEvent.date)}
+        </div>
+      )}
+
+      <form onSubmit={handleSave} className="contest-form">
+        <div className="contest-form-row">
+          <label>🎯 Men's Closest to the Hole</label>
+          <select value={mensClosest} onChange={e => setMensClosest(e.target.value)} className="admin-inline-input">
+            <option value="">— Select player —</option>
+            {players.map(p => <option key={p.id} value={p.id}>{p.first_name || p.username} {p.last_name || ''}</option>)}
+          </select>
+          <input type="text" value={mensDistance} onChange={e => setMensDistance(e.target.value)} placeholder="Distance (e.g. 4'2&quot;)" className="admin-inline-input" style={{ maxWidth: 120 }} />
+        </div>
+
+        <div className="contest-form-row">
+          <label>🎯 Women's Closest to the Hole</label>
+          <select value={womensClosest} onChange={e => setWomensClosest(e.target.value)} className="admin-inline-input">
+            <option value="">— Select player —</option>
+            {players.map(p => <option key={p.id} value={p.id}>{p.first_name || p.username} {p.last_name || ''}</option>)}
+          </select>
+          <input type="text" value={womensDistance} onChange={e => setWomensDistance(e.target.value)} placeholder="Distance (e.g. 6'8&quot;)" className="admin-inline-input" style={{ maxWidth: 120 }} />
+        </div>
+
+        <div className="contest-form-row">
+          <label>🏌️ Longest Putt</label>
+          <select value={longestPutt} onChange={e => setLongestPutt(e.target.value)} className="admin-inline-input">
+            <option value="">— Select player —</option>
+            {players.map(p => <option key={p.id} value={p.id}>{p.first_name || p.username} {p.last_name || ''}</option>)}
+          </select>
+          <input type="text" value={puttDistance} onChange={e => setPuttDistance(e.target.value)} placeholder="Distance (e.g. 22')" className="admin-inline-input" style={{ maxWidth: 120 }} />
+        </div>
+
+        {msg && <p className={msg.includes('saved') ? 'golf-success' : 'golf-error'}>{msg}</p>}
+        <button type="submit" className="btn btn-primary" disabled={saving} style={{ marginTop: 12 }}>
+          {saving ? 'Saving…' : 'Save Winners'}
+        </button>
+      </form>
+    </div>
+  )
+}
+
 // ─── Messages Tab ─────────────────────────────────────────────────────────────
 
 function MessagesTab() {
@@ -555,8 +694,20 @@ function MessagesTab() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [expandedId, setExpandedId] = useState(null)
+  // Broadcast state
+  const [showBroadcast, setShowBroadcast] = useState(false)
+  const [bcSubject, setBcSubject] = useState('')
+  const [bcBody, setBcBody] = useState('')
+  const [bcRecipient, setBcRecipient] = useState('all') // 'all' or player id
+  const [bcSending, setBcSending] = useState(false)
+  const [bcResult, setBcResult] = useState(null)
+  const [bcPlayers, setBcPlayers] = useState([])
+  const [bcMode, setBcMode] = useState('') // '' | 'group' | 'individual' | 'reply'
 
   useEffect(() => { load() }, [])
+  useEffect(() => {
+    adminGetPlayers().then(p => setBcPlayers(p.filter(pl => pl.role === 'player' && !pl.archived))).catch(() => {})
+  }, [])
 
   async function load() {
     setLoading(true)
@@ -591,6 +742,54 @@ function MessagesTab() {
     }
   }
 
+  async function handleBroadcast(e) {
+    e.preventDefault()
+    setBcSending(true)
+    setBcResult(null)
+    try {
+      const playerId = bcRecipient === 'all' ? undefined : parseInt(bcRecipient, 10)
+      const result = await adminBroadcast(bcSubject, bcBody, playerId)
+      setBcResult(result)
+      setBcSubject('')
+      setBcBody('')
+      setBcRecipient('all')
+    } catch (e) { setBcResult({ error: e.message }) }
+    finally { setBcSending(false) }
+  }
+
+  function openGroupCompose() {
+    setBcMode('group')
+    setBcRecipient('all')
+    setBcSubject('')
+    setBcBody('')
+    setBcResult(null)
+    setShowBroadcast(true)
+  }
+
+  function openIndividualCompose() {
+    setBcMode('individual')
+    setBcRecipient('')
+    setBcSubject('')
+    setBcBody('')
+    setBcResult(null)
+    setShowBroadcast(true)
+  }
+
+  function openReply(msg) {
+    setBcMode('reply')
+    setBcRecipient(String(msg.player_id))
+    setBcSubject(`Re: ${msg.subject}`)
+    setBcBody('')
+    setBcResult(null)
+    setShowBroadcast(true)
+    setExpandedId(null)
+  }
+
+  function closeCompose() {
+    setShowBroadcast(false)
+    setBcMode('')
+  }
+
   if (loading) return <p className="golf-loading">Loading messages…</p>
   if (error) return <p className="golf-error">{error}</p>
 
@@ -598,6 +797,67 @@ function MessagesTab() {
 
   return (
     <div>
+      {/* Compose buttons */}
+      <div className="admin-section-header">
+        <h3>Send Message</h3>
+        <div className="tee-actions">
+          <button className="btn btn-small btn-primary" onClick={openGroupCompose}>
+            📢 Group Announcement
+          </button>
+          <button className="btn btn-small btn-secondary" onClick={openIndividualCompose}>
+            📨 Individual Message
+          </button>
+          {showBroadcast && (
+            <button className="btn btn-small btn-secondary" onClick={closeCompose}>Cancel</button>
+          )}
+        </div>
+      </div>
+
+      {showBroadcast && (
+        <form onSubmit={handleBroadcast} className="admin-add-score-form" style={{ marginBottom: 24 }}>
+          <h4>{bcMode === 'group' ? '📢 Send to All Members' : bcMode === 'reply' ? '↩️ Reply to Member' : '📨 Send to Individual'}</h4>
+          <div className="golf-form">
+            {bcMode !== 'group' && (
+              <>
+                <label>To</label>
+                <select value={bcRecipient} onChange={e => setBcRecipient(e.target.value)} required style={{ padding: '8px 12px', border: '1px solid var(--border)', borderRadius: 8, fontSize: '0.95rem' }}>
+                  <option value="">— Select player —</option>
+                  {bcPlayers.map(p => (
+                    <option key={p.id} value={p.id}>👤 {p.first_name || p.username} {p.last_name || ''}</option>
+                  ))}
+                </select>
+              </>
+            )}
+            <label>Subject</label>
+            <input type="text" value={bcSubject} onChange={e => setBcSubject(e.target.value)} required placeholder="Message subject" />
+            <label>Message</label>
+            <textarea value={bcBody} onChange={e => setBcBody(e.target.value)} required rows={4} placeholder="Type your message…" style={{ padding: '10px 14px', border: '1px solid var(--border)', borderRadius: 8, fontSize: '0.95rem', fontFamily: 'inherit', resize: 'vertical' }} />
+          </div>
+          <div className="admin-add-score-actions" style={{ marginTop: 12 }}>
+            <button type="submit" className="btn btn-primary" disabled={bcSending || (bcMode !== 'group' && !bcRecipient)}>
+              {bcSending ? 'Sending…' : bcMode === 'group' ? '📢 Send to All' : '📨 Send'}
+            </button>
+          </div>
+          {bcResult && !bcResult.error && (
+            <div style={{ marginTop: 12 }}>
+              <p className="golf-success">✅ {bcResult.message}</p>
+              {bcResult.phones && bcResult.phones.length > 0 && (
+                <details style={{ marginTop: 8 }}>
+                  <summary style={{ cursor: 'pointer', fontSize: '0.85rem', color: '#166534', fontWeight: 600 }}>
+                    📱 Copy phone numbers for text ({bcResult.phones.length})
+                  </summary>
+                  <pre style={{ background: '#f1f5f9', padding: 10, borderRadius: 6, fontSize: '0.8rem', marginTop: 6, whiteSpace: 'pre-wrap' }}>
+                    {bcResult.phones.map(p => `${p.name}: ${p.phone}`).join('\n')}
+                  </pre>
+                </details>
+              )}
+            </div>
+          )}
+          {bcResult && bcResult.error && <p className="golf-error">{bcResult.error}</p>}
+        </form>
+      )}
+
+      {/* Inbox */}
       <div className="admin-section-header">
         <h3>Member Messages</h3>
         {unread > 0 && <span className="nav-badge">{unread}</span>}
@@ -620,6 +880,7 @@ function MessagesTab() {
                 <div className="message-body-section">
                   <p className="message-body-text">{msg.body}</p>
                   <div className="message-actions">
+                    <button className="btn btn-small btn-primary" onClick={() => openReply(msg)}>↩️ Reply</button>
                     <button className="btn btn-small btn-danger" onClick={() => deleteMsg(msg.id)}>Delete</button>
                   </div>
                 </div>

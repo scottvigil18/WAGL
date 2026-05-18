@@ -118,7 +118,7 @@ router.post('/login', (req, res) => {
 
     // Find user
     const player = golfDb.prepare(
-      'SELECT id, username, password_hash, role FROM players WHERE username = ?'
+      'SELECT id, username, password_hash, role, force_password_reset FROM players WHERE username = ?'
     ).get(username);
 
     if (!player) {
@@ -133,7 +133,7 @@ router.post('/login', (req, res) => {
 
     // Generate JWT with 24h expiry
     const token = jwt.sign(
-      { id: player.id, role: player.role },
+      { id: player.id, role: player.role, username: player.username },
       JWT_SECRET,
       { expiresIn: '24h' }
     );
@@ -142,8 +142,37 @@ router.post('/login', (req, res) => {
       token,
       id: player.id,
       username: player.username,
-      role: player.role
+      role: player.role,
+      force_password_reset: player.force_password_reset === 1
     });
+  } catch (err) {
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * POST /api/golf/request-reset
+ * Public endpoint: submit a password reset request (creates a message for admin).
+ */
+router.post('/request-reset', (req, res) => {
+  try {
+    const { username } = req.body;
+    if (!username || typeof username !== 'string' || username.trim().length < 1) {
+      return res.status(400).json({ error: 'Username is required' });
+    }
+
+    const player = golfDb.prepare('SELECT id, username FROM players WHERE username = ?').get(username.trim());
+    if (!player) {
+      // Don't reveal if user exists — just say request submitted
+      return res.json({ message: 'If that account exists, the admin has been notified.' });
+    }
+
+    // Create a message in the admin messages table
+    golfDb.prepare(
+      'INSERT INTO messages (player_id, subject, body) VALUES (?, ?, ?)'
+    ).run(player.id, 'Password Reset Request', `Player "${player.username}" has requested a password reset. Please use the admin panel to reset their password.`);
+
+    return res.json({ message: 'If that account exists, the admin has been notified.' });
   } catch (err) {
     return res.status(500).json({ error: 'Internal server error' });
   }
@@ -251,6 +280,97 @@ router.put('/profile', authMiddleware, (req, res) => {
 });
 
 /**
+ * GET /api/golf/notifications
+ * Get the authenticated user's unread notifications.
+ */
+router.get('/notifications', authMiddleware, (req, res) => {
+  try {
+    const notifications = golfDb.prepare(
+      'SELECT id, subject, body, read, created_at FROM notifications WHERE player_id = ? ORDER BY created_at DESC LIMIT 50'
+    ).all(req.user.id);
+    return res.json(notifications);
+  } catch (err) {
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * GET /api/golf/notifications/unread-count
+ * Count of unread notifications for the authenticated user.
+ */
+router.get('/notifications/unread-count', authMiddleware, (req, res) => {
+  try {
+    const result = golfDb.prepare(
+      'SELECT COUNT(*) AS count FROM notifications WHERE player_id = ? AND read = 0'
+    ).get(req.user.id);
+    return res.json({ count: result.count });
+  } catch (err) {
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * POST /api/golf/notifications/:id/read
+ * Mark a notification as read.
+ */
+router.post('/notifications/:id/read', authMiddleware, (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (isNaN(id)) return res.status(400).json({ error: 'Invalid ID' });
+    golfDb.prepare('UPDATE notifications SET read = 1 WHERE id = ? AND player_id = ?').run(id, req.user.id);
+    return res.json({ message: 'Marked as read' });
+  } catch (err) {
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * DELETE /api/golf/notifications/:id
+ * Delete a notification (only the owner can delete their own).
+ */
+router.delete('/notifications/:id', authMiddleware, (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (isNaN(id)) return res.status(400).json({ error: 'Invalid ID' });
+    golfDb.prepare('DELETE FROM notifications WHERE id = ? AND player_id = ?').run(id, req.user.id);
+    return res.json({ message: 'Notification deleted' });
+  } catch (err) {
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * PUT /api/golf/profile/password
+ * Change the authenticated user's password. Requires current password.
+ */
+router.put('/profile/password', authMiddleware, (req, res) => {
+  try {
+    const { current_password, new_password } = req.body;
+    if (!current_password || !new_password) {
+      return res.status(400).json({ error: 'Current password and new password are required' });
+    }
+    if (typeof new_password !== 'string' || new_password.length < 6) {
+      return res.status(400).json({ error: 'New password must be at least 6 characters' });
+    }
+
+    const player = golfDb.prepare('SELECT id, password_hash FROM players WHERE id = ?').get(req.user.id);
+    if (!player) return res.status(404).json({ error: 'Player not found' });
+
+    const valid = bcrypt.compareSync(current_password, player.password_hash);
+    if (!valid) {
+      return res.status(401).json({ error: 'Current password is incorrect' });
+    }
+
+    const newHash = bcrypt.hashSync(new_password, 10);
+    golfDb.prepare('UPDATE players SET password_hash = ?, force_password_reset = 0 WHERE id = ?').run(newHash, req.user.id);
+
+    return res.json({ message: 'Password updated successfully' });
+  } catch (err) {
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
  * POST /api/golf/messages
  * Send a message to the admin.
  */
@@ -303,6 +423,9 @@ router.get('/avatars/:filename', (req, res) => {
   if (!fs.existsSync(filePath)) {
     return res.status(404).json({ error: 'Avatar not found' });
   }
+  res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.set('Pragma', 'no-cache');
+  res.set('Expires', '0');
   res.sendFile(filePath);
 });
 

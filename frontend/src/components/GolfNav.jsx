@@ -1,10 +1,11 @@
-import { clearToken, getPendingPhotoCount, adminGetUnreadCount, getUser } from '../api/golfApi'
+import { clearToken, getPendingPhotoCount, adminGetUnreadCount, getUnreadNotificationCount, getUser } from '../api/golfApi'
 import { useState, useEffect } from 'react'
 
 export default function GolfNav({ user, onLogout }) {
   const hash = window.location.hash || '#/'
   const [pendingCount, setPendingCount] = useState(0)
   const [unreadMsgCount, setUnreadMsgCount] = useState(0)
+  const [notifCount, setNotifCount] = useState(0)
 
   useEffect(() => {
     if (user?.role === 'admin') {
@@ -18,6 +19,14 @@ export default function GolfNav({ user, onLogout }) {
       window.addEventListener('photos-updated', handler)
       window.addEventListener('messages-updated', handler)
       return () => { clearInterval(interval); window.removeEventListener('photos-updated', handler); window.removeEventListener('messages-updated', handler) }
+    } else if (user) {
+      // Player: check for notifications
+      const fetchNotifs = () => getUnreadNotificationCount().then(d => setNotifCount(d.count)).catch(() => {})
+      fetchNotifs()
+      const interval = setInterval(fetchNotifs, 30000)
+      const handler = () => fetchNotifs()
+      window.addEventListener('notifications-updated', handler)
+      return () => { clearInterval(interval); window.removeEventListener('notifications-updated', handler) }
     }
   }, [user])
 
@@ -68,6 +77,11 @@ export default function GolfNav({ user, onLogout }) {
           </a>
         </nav>
         <div className="golf-nav-user">
+          {notifCount > 0 && user?.role !== 'admin' && (
+            <a href="#/golf/notifications" className="nav-notification-link" title="You have notifications">
+              🔔 <span className="nav-badge">{notifCount}</span>
+            </a>
+          )}
           <a href="#/golf/profile" className="golf-nav-username-link">{user?.username}</a>
           <button className="btn btn-small btn-secondary" onClick={handleLogout}>Logout</button>
         </div>

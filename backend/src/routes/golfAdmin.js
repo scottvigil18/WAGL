@@ -371,6 +371,63 @@ router.delete('/scores/:id', async (req, res) => {
   }
 });
 
+/**
+ * POST /api/golf/admin/broadcast
+ * Send a message to all active (non-archived) players, or to a specific player if player_id is provided.
+ * Stores in notifications table for in-app viewing.
+ * Returns the list of member emails and phones for external sending.
+ */
+router.post('/broadcast', (req, res) => {
+  try {
+    const { subject, body, player_id } = req.body;
+    if (!subject || !body) {
+      return res.status(400).json({ error: 'Subject and body are required' });
+    }
+
+    let players;
+    if (player_id) {
+      // Send to specific player
+      const player = golfDb.prepare(
+        "SELECT id, username, first_name, last_name, email, phone FROM players WHERE id = ? AND (archived IS NULL OR archived = 0)"
+      ).get(parseInt(player_id, 10));
+      if (!player) return res.status(404).json({ error: 'Player not found' });
+      players = [player];
+    } else {
+      // Send to all active non-admin players
+      players = golfDb.prepare(
+        "SELECT id, username, first_name, last_name, email, phone FROM players WHERE role = 'player' AND (archived IS NULL OR archived = 0)"
+      ).all();
+    }
+
+    // Insert notification for each player
+    const insert = golfDb.prepare(
+      'INSERT INTO notifications (player_id, subject, body) VALUES (?, ?, ?)'
+    );
+    const insertAll = golfDb.transaction((items) => {
+      for (const p of items) {
+        insert.run(p.id, subject.trim(), body.trim());
+      }
+    });
+    insertAll(players);
+
+    // Return contact info for external sending
+    const emails = players.filter(p => p.email).map(p => p.email);
+    const phones = players.filter(p => p.phone).map(p => ({
+      name: `${p.first_name || p.username} ${p.last_name || ''}`.trim(),
+      phone: p.phone,
+    }));
+
+    return res.json({
+      message: `Notification sent to ${players.length} member${players.length !== 1 ? 's' : ''}`,
+      count: players.length,
+      emails,
+      phones,
+    });
+  } catch (err) {
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // ─── Messages ─────────────────────────────────────────────────────────────────
 
 /**
@@ -430,6 +487,66 @@ router.delete('/messages/:id', (req, res) => {
     if (isNaN(msgId)) return res.status(400).json({ error: 'Invalid message ID' });
     golfDb.prepare('DELETE FROM messages WHERE id = ?').run(msgId);
     return res.json({ message: 'Message deleted' });
+  } catch (err) {
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * POST /api/golf/admin/players/:id/force-reset
+ * Force a user to reset their password on next login.
+ */
+router.post('/players/:id/force-reset', (req, res) => {
+  try {
+    const playerId = parseInt(req.params.id, 10);
+    if (isNaN(playerId)) return res.status(400).json({ error: 'Invalid player ID' });
+
+    const player = golfDb.prepare('SELECT id FROM players WHERE id = ?').get(playerId);
+    if (!player) return res.status(404).json({ error: 'Player not found' });
+
+    golfDb.prepare('UPDATE players SET force_password_reset = 1 WHERE id = ?').run(playerId);
+    return res.json({ message: 'Password reset forced for next login' });
+  } catch (err) {
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ─── Contest Winners ──────────────────────────────────────────────────────────
+
+/**
+ * POST /api/golf/admin/contest-winners
+ * Set a contest winner for an event. Upserts by event_date + category.
+ * Body: { event_date, category, player_name, player_id (optional), distance (optional) }
+ */
+router.post('/contest-winners', (req, res) => {
+  try {
+    const { event_date, category, player_name, player_id, distance } = req.body;
+
+    if (!event_date || !/^\d{4}-\d{2}-\d{2}$/.test(event_date)) {
+      return res.status(400).json({ error: 'event_date must be YYYY-MM-DD' });
+    }
+    if (!['mens_closest', 'womens_closest', 'longest_putt'].includes(category)) {
+      return res.status(400).json({ error: 'category must be mens_closest, womens_closest, or longest_putt' });
+    }
+    if (!player_name || typeof player_name !== 'string' || !player_name.trim()) {
+      return res.status(400).json({ error: 'player_name is required' });
+    }
+
+    const existing = golfDb.prepare(
+      'SELECT id FROM contest_winners WHERE event_date = ? AND category = ?'
+    ).get(event_date, category);
+
+    if (existing) {
+      golfDb.prepare(
+        'UPDATE contest_winners SET player_name = ?, player_id = ?, distance = ? WHERE id = ?'
+      ).run(player_name.trim(), player_id || null, distance || '', existing.id);
+    } else {
+      golfDb.prepare(
+        'INSERT INTO contest_winners (event_date, category, player_name, player_id, distance) VALUES (?, ?, ?, ?, ?)'
+      ).run(event_date, category, player_name.trim(), player_id || null, distance || '');
+    }
+
+    return res.json({ message: 'Contest winner saved' });
   } catch (err) {
     return res.status(500).json({ error: 'Internal server error' });
   }

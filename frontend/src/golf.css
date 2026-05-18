@@ -1369,9 +1369,7 @@
 
 /* ─── Contact Admin Section ────────────────────────────────────────────────── */
 .contact-admin-section {
-  margin-top: 32px;
-  padding-top: 24px;
-  border-top: 1px solid var(--border);
+  padding-top: 0;
 }
 
 .contact-admin-section h3 {
@@ -1858,4 +1856,188 @@
 .join-cta-note a {
   color: #166534;
   font-weight: 600;
+}
+
+/* ─── Contest Winners ──────────────────────────────────────────────────────── */
+.contest-winners-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.contest-week-card {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px 20px;
+}
+
+.contest-week-title {
+  color: #166534;
+  font-size: 1rem;
+  margin: 0 0 12px;
+}
+
+.contest-entries {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.contest-entry {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  background: #f0fdf4;
+  border-radius: 6px;
+}
+
+.contest-category {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  min-width: 220px;
+}
+
+.contest-winner-name {
+  font-weight: 700;
+  color: #166534;
+  font-size: 0.95rem;
+}
+
+.contest-distance {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-left: auto;
+  background: #e2e8f0;
+  padding: 2px 8px;
+  border-radius: 8px;
+}
+
+/* ─── Contest Winners Form ─────────────────────────────────────────────────── */
+.contest-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.contest-form-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.contest-form-row label {
+  font-weight: 600;
+  font-size: 0.9rem;
+  min-width: 220px;
+  color: var(--text);
+}
+
+.contest-form-row select {
+  min-width: 200px;
+}
+
+/* ─── Notification Reply Form ──────────────────────────────────────────────── */
+.notif-reply-form {
+  margin-top: 10px;
+}
+
+.notif-reply-textarea {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-family: inherit;
+  resize: vertical;
+  margin-bottom: 8px;
+}
+
+.notif-reply-textarea:focus {
+  outline: none;
+  border-color: #166534;
+  box-shadow: 0 0 0 3px rgba(22, 101, 52, 0.1);
+}
+
+/* ─── Profile Two-Column Layout ────────────────────────────────────────────── */
+.profile-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+.profile-layout-left {
+  min-width: 0;
+}
+
+.profile-layout-right {
+  min-width: 0;
+}
+
+.profile-layout-right .photo-gallery-section {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
+}
+
+@media (max-width: 768px) {
+  .profile-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ─── Photo Upload Preview ─────────────────────────────────────────────────── */
+.photo-upload-section {
+  margin-bottom: 20px;
+}
+
+.photo-preview-section {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 10px;
+  padding: 16px;
+}
+
+.photo-preview-card {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.photo-preview-img {
+  width: 150px;
+  height: 120px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 2px solid #166534;
+}
+
+.photo-preview-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1;
+}
+
+.photo-preview-actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* ─── Flight Filter ────────────────────────────────────────────────────────── */
+.flight-filter {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.leaderboard-refresh-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
 }

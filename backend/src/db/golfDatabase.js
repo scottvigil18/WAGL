@@ -101,6 +101,13 @@ if (!hasAvatar) {
   golfDb.exec("ALTER TABLE players ADD COLUMN avatar TEXT DEFAULT NULL");
 }
 
+// Migration: add force_password_reset column
+const playerCols4 = golfDb.prepare("PRAGMA table_info(players)").all();
+const hasForceReset = playerCols4.some(col => col.name === 'force_password_reset');
+if (!hasForceReset) {
+  golfDb.exec("ALTER TABLE players ADD COLUMN force_password_reset INTEGER NOT NULL DEFAULT 0");
+}
+
 // Migration: add approved column to photos if it doesn't exist
 try {
   const photoCols = golfDb.prepare("PRAGMA table_info(photos)").all();

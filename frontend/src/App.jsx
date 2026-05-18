@@ -22,6 +22,8 @@ import GolfSplashPage from './pages/GolfSplashPage'
 import GolfAboutPage from './pages/GolfAboutPage'
 import GolfContactPage from './pages/GolfContactPage'
 import GolfJoinPage from './pages/GolfJoinPage'
+import GolfNotificationsPage from './pages/GolfNotificationsPage'
+import GolfForceResetPage from './pages/GolfForceResetPage'
 import { getUser, clearToken } from './api/golfApi'
 
 // Simple client-side router using hash-based navigation
@@ -77,7 +79,11 @@ export default function App() {
 
   function handleGolfLogin(user) {
     setGolfUser(user)
-    window.location.hash = user.role === 'admin' ? '#/golf/admin' : '#/golf/leaderboard'
+    if (user.force_password_reset) {
+      window.location.hash = '#/golf/force-reset'
+    } else {
+      window.location.hash = user.role === 'admin' ? '#/golf/admin' : '#/golf/leaderboard'
+    }
   }
 
   function handleGolfLogout() {
@@ -117,6 +123,17 @@ export default function App() {
         </div>
       )
     }
+    if (path === '#/golf/force-reset') {
+      return (
+        <div className="app golf-app">
+          <main>
+            <GolfForceResetPage onComplete={() => {
+              window.location.hash = '#/golf/leaderboard'
+            }} />
+          </main>
+        </div>
+      )
+    }
 
     // Protected golf routes — redirect to login if no valid token
     if (!golfUser) {
@@ -134,6 +151,8 @@ export default function App() {
       golfPage = <GolfSchedulePage />
     } else if (path === '#/golf/photos') {
       golfPage = <GolfPhotosPage />
+    } else if (path === '#/golf/notifications') {
+      golfPage = <GolfNotificationsPage />
     } else if (path === '#/golf/profile') {
       golfPage = <GolfProfilePage />
     } else if (path.startsWith('#/golf/player/')) {

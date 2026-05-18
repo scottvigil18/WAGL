@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS players (
   role          TEXT    NOT NULL DEFAULT 'player' CHECK(role IN ('player', 'admin')),
   archived      INTEGER NOT NULL DEFAULT 0,
   avatar        TEXT    DEFAULT NULL,
+  force_password_reset INTEGER NOT NULL DEFAULT 0,
   created_at    TEXT    NOT NULL DEFAULT (datetime('now'))
 );
 
@@ -87,3 +88,29 @@ CREATE TABLE IF NOT EXISTS messages (
 );
 
 CREATE INDEX IF NOT EXISTS idx_messages_read ON messages(read);
+
+-- Notifications table (admin broadcasts to members)
+CREATE TABLE IF NOT EXISTS notifications (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  player_id   INTEGER NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+  subject     TEXT    NOT NULL,
+  body        TEXT    NOT NULL,
+  read        INTEGER NOT NULL DEFAULT 0,
+  created_at  TEXT    NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_notifications_player ON notifications(player_id, read);
+
+-- Contest Winners table
+CREATE TABLE IF NOT EXISTS contest_winners (
+  id              INTEGER PRIMARY KEY AUTOINCREMENT,
+  event_date      TEXT    NOT NULL,
+  category        TEXT    NOT NULL CHECK(category IN ('mens_closest', 'womens_closest', 'longest_putt')),
+  player_id       INTEGER REFERENCES players(id) ON DELETE SET NULL,
+  player_name     TEXT    NOT NULL DEFAULT '',
+  distance        TEXT    DEFAULT '',
+  created_at      TEXT    NOT NULL DEFAULT (datetime('now')),
+  UNIQUE(event_date, category)
+);
+
+CREATE INDEX IF NOT EXISTS idx_contest_winners_date ON contest_winners(event_date);

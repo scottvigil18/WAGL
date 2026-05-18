@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
-import { getMyProfile, updateMyProfile, uploadAvatar, sendMessageToAdmin } from '../api/golfApi'
+import { getMyProfile, updateMyProfile, uploadAvatar, sendMessageToAdmin, changeMyPassword } from '../api/golfApi'
 import { formatPhoneInput, formatPhoneDisplay } from '../utils/formatPhone'
 import PhotoGallery from '../components/PhotoGallery'
+import ContactAdminForm from '../components/ContactAdminForm'
 
 export default function GolfProfilePage() {
   const [profile, setProfile] = useState(null)
@@ -57,7 +58,9 @@ export default function GolfProfilePage() {
     setMsg('')
     try {
       const result = await uploadAvatar(file)
-      setProfile(prev => ({ ...prev, avatar: result.avatar }))
+      // Add cache-buster to force browser to reload the image
+      const avatarUrl = result.avatar + '?t=' + Date.now()
+      setProfile(prev => ({ ...prev, avatar: avatarUrl }))
       setMsg('Avatar updated.')
     } catch (e) { setMsg(e.message) }
     finally { setUploading(false) }
@@ -67,37 +70,170 @@ export default function GolfProfilePage() {
   if (error) return <div className="golf-page"><p className="golf-error">{error}</p></div>
 
   return (
-    <div className="golf-page">
-      <h2>👤 My Profile</h2>
-      <div className="profile-card">
-        <div className="profile-avatar-section">
-          <div className="profile-avatar">
-            {profile.avatar ? (
-              <img src={profile.avatar} alt="Avatar" className="profile-avatar-img" />
-            ) : (
-              <div className="profile-avatar-placeholder">
-                {(profile.first_name || profile.username || '?')[0].toUpperCase()}
-              </div>
-            )}
-          </div>
-          <div className="profile-avatar-upload">
-            <input
-              ref={fileRef}
-              type="file"
-              accept="image/*"
-              onChange={handleAvatarChange}
-              style={{ display: 'none' }}
-            />
-            <button
-              className="btn btn-small btn-secondary"
-              onClick={() => fileRef.current?.click()}
-              disabled={uploading}
-            >
-              {uploading ? 'Uploading…' : 'Change Photo'}
-            </button>
-            <span className="profile-avatar-hint">JPG, PNG, GIF — max 2 MB</span>
-          </div>
+    <div className="golf-page golf-page-wide">
+      <div className="score-header">
+        <div className="score-header-avatar">
+          {profile?.avatar ? (
+            <img src={profile.avatar} alt="Avatar" className="score-avatar-img" />
+          ) : (
+            <span className="score-avatar-default">👤</span>
+          )}
         </div>
+        <h2>My Profile</h2>
+      </div>
+      <ProfileTabs profile={profile} setProfile={setProfile} editing={editing} setEditing={setEditing}
+        fields={fields} setFields={setFields} saving={saving} setSaving={setSaving} msg={msg} setMsg={setMsg}
+        uploading={uploading} setUploading={setUploading} fileRef={fileRef}
+        startEdit={startEdit} handleSave={handleSave} handleAvatarChange={handleAvatarChange} />
+    </div>
+  )
+}
+
+function ProfileTabs({ profile, setProfile, editing, setEditing, fields, setFields, saving, setSaving, msg, setMsg, uploading, setUploading, fileRef, startEdit, handleSave, handleAvatarChange }) {
+  const [activeTab, setActiveTab] = useState('Profile')
+  const tabs = profile.role !== 'admin'
+    ? ['Profile', 'Change Password', 'Contact Admin']
+    : ['Profile', 'Change Password']
+
+  return (
+    <>
+      <div className="leaderboard-tabs">
+        {tabs.map(tab => (
+          <button
+            key={tab}
+            className={`leaderboard-tab-btn${activeTab === tab ? ' active' : ''}`}
+            onClick={() => setActiveTab(tab)}
+          >
+            {tab}
+          </button>
+        ))}
+      </div>
+      <div className="leaderboard-tab-content">
+        {activeTab === 'Profile' && (
+          <ProfileContent profile={profile} setProfile={setProfile} editing={editing} setEditing={setEditing}
+            fields={fields} setFields={setFields} saving={saving} setSaving={setSaving} msg={msg} setMsg={setMsg}
+            uploading={uploading} setUploading={setUploading} fileRef={fileRef}
+            startEdit={startEdit} handleSave={handleSave} handleAvatarChange={handleAvatarChange} />
+        )}
+        {activeTab === 'Change Password' && <ChangePasswordForm />}
+        {activeTab === 'Contact Admin' && <ContactAdminForm />}
+      </div>
+    </>
+  )
+}
+
+function ChangePasswordForm() {
+  const [currentPw, setCurrentPw] = useState('')
+  const [newPw, setNewPw] = useState('')
+  const [confirmPw, setConfirmPw] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [pwMsg, setPwMsg] = useState('')
+
+  async function handleSubmit(e) {
+    e.preventDefault()
+    setPwMsg('')
+    if (newPw !== confirmPw) {
+      setPwMsg('New passwords do not match')
+      return
+    }
+    setSaving(true)
+    try {
+      await changeMyPassword(currentPw, newPw)
+      setPwMsg('Password changed successfully!')
+      setCurrentPw('')
+      setNewPw('')
+      setConfirmPw('')
+    } catch (err) { setPwMsg(err.message) }
+    finally { setSaving(false) }
+  }
+
+  return (
+    <div className="profile-card" style={{ maxWidth: 400 }}>
+      <h3 style={{ color: '#166534', marginBottom: 16 }}>🔒 Change Password</h3>
+      <form onSubmit={handleSubmit} className="golf-form">
+        <label htmlFor="pw-current">Current Password</label>
+        <input
+          id="pw-current"
+          type="password"
+          value={currentPw}
+          onChange={ev => setCurrentPw(ev.target.value)}
+          required
+          placeholder="Enter current password"
+        />
+        <label htmlFor="pw-new">New Password</label>
+        <input
+          id="pw-new"
+          type="password"
+          value={newPw}
+          onChange={ev => setNewPw(ev.target.value)}
+          required
+          minLength={6}
+          placeholder="Min 6 characters"
+        />
+        <label htmlFor="pw-confirm">Confirm New Password</label>
+        <input
+          id="pw-confirm"
+          type="password"
+          value={confirmPw}
+          onChange={ev => setConfirmPw(ev.target.value)}
+          required
+          placeholder="Re-enter new password"
+        />
+        {pwMsg && <p className={pwMsg.includes('success') ? 'golf-success' : 'golf-error'}>{pwMsg}</p>}
+        <button type="submit" className="btn btn-primary" disabled={saving}>
+          {saving ? 'Changing…' : 'Change Password'}
+        </button>
+      </form>
+    </div>
+  )
+}
+
+function ProfileContent({ profile, setProfile, editing, setEditing, fields, setFields, saving, setSaving, msg, setMsg, uploading, setUploading, fileRef, startEdit, handleSave, handleAvatarChange }) {
+  const localFileRef = useRef()
+
+  function handleUploadClick() {
+    localFileRef.current?.click()
+  }
+
+  function handleFileChange(e) {
+    handleAvatarChange(e)
+    // Reset the input so the same file can be re-selected
+    if (localFileRef.current) localFileRef.current.value = ''
+  }
+
+  return (
+    <div className="profile-layout">
+      <div className="profile-layout-left">
+        <div className="profile-card">
+          <div className="profile-avatar-section">
+            <div className="profile-avatar">
+              {profile.avatar ? (
+                <img src={profile.avatar} alt="Avatar" className="profile-avatar-img" />
+              ) : (
+                <div className="profile-avatar-placeholder">
+                  {(profile.first_name || profile.username || '?')[0].toUpperCase()}
+                </div>
+              )}
+            </div>
+            <div className="profile-avatar-upload">
+              <input
+                ref={localFileRef}
+                type="file"
+                accept="image/jpeg,image/png,image/gif,image/webp"
+                onChange={handleFileChange}
+                style={{ display: 'none' }}
+              />
+              <button
+                className="btn btn-small btn-primary"
+                onClick={handleUploadClick}
+                disabled={uploading}
+                type="button"
+              >
+                {uploading ? 'Uploading…' : '📷 Upload Avatar'}
+              </button>
+              <span className="profile-avatar-hint">JPG, PNG, GIF — max 2 MB</span>
+            </div>
+          </div>
 
         {!editing ? (
           <>
@@ -193,74 +329,13 @@ export default function GolfProfilePage() {
           </form>
         )}
       </div>
+      </div>
 
-      {profile && <PhotoGallery playerId={profile.id} canUpload={false} />}
-
-      {/* Contact Admin */}
-      {profile && profile.role !== 'admin' && <ContactAdminForm />}
-    </div>
-  )
-}
-
-function ContactAdminForm() {
-  const [subject, setSubject] = useState('')
-  const [body, setBody] = useState('')
-  const [sending, setSending] = useState(false)
-  const [msg, setMsg] = useState('')
-  const [showForm, setShowForm] = useState(false)
-
-  async function handleSend(e) {
-    e.preventDefault()
-    setSending(true)
-    setMsg('')
-    try {
-      await sendMessageToAdmin(subject, body)
-      setMsg('Message sent to admin!')
-      setSubject('')
-      setBody('')
-      setShowForm(false)
-    } catch (e) { setMsg(e.message) }
-    finally { setSending(false) }
-  }
-
-  return (
-    <div className="contact-admin-section">
-      <h3>✉️ Contact Admin</h3>
-      {!showForm ? (
-        <button className="btn btn-secondary" onClick={() => setShowForm(true)}>
-          Send a Message to Admin
-        </button>
-      ) : (
-        <form onSubmit={handleSend} className="golf-form contact-form">
-          <label htmlFor="msg-subject">Subject</label>
-          <input
-            id="msg-subject"
-            type="text"
-            value={subject}
-            onChange={e => setSubject(e.target.value)}
-            placeholder="What's this about?"
-            required
-          />
-          <label htmlFor="msg-body">Message</label>
-          <textarea
-            id="msg-body"
-            value={body}
-            onChange={e => setBody(e.target.value)}
-            placeholder="Type your message here…"
-            required
-            rows={4}
-          />
-          <div className="profile-form-actions">
-            <button type="submit" className="btn btn-primary" disabled={sending}>
-              {sending ? 'Sending…' : 'Send Message'}
-            </button>
-            <button type="button" className="btn btn-secondary" onClick={() => setShowForm(false)}>
-              Cancel
-            </button>
-          </div>
-        </form>
+      {profile && (
+        <div className="profile-layout-right">
+          <PhotoGallery playerId={profile.id} canUpload={false} />
+        </div>
       )}
-      {msg && <p className={msg.includes('sent') ? 'golf-success' : 'golf-error'}>{msg}</p>}
     </div>
   )
 }

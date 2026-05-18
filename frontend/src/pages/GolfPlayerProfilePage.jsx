@@ -26,8 +26,17 @@ export default function GolfPlayerProfilePage({ playerId }) {
   if (!profile) return <div className="golf-page"><p className="golf-empty">Player not found.</p></div>
 
   return (
-    <div className="golf-page">
-      <h2>👤 {profile.first_name || profile.username} {profile.last_name || ''}</h2>
+    <div className="golf-page golf-page-wide">
+      <div className="score-header">
+        <div className="score-header-avatar">
+          {profile.avatar ? (
+            <img src={profile.avatar} alt="Avatar" className="score-avatar-img" />
+          ) : (
+            <span className="score-avatar-default">{(profile.first_name || profile.username || '?')[0].toUpperCase()}</span>
+          )}
+        </div>
+        <h2>{profile.first_name || profile.username} {profile.last_name || ''}</h2>
+      </div>
       <div className="profile-card">
         <div className="profile-grid">
           <div className="profile-field">

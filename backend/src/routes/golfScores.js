@@ -19,7 +19,7 @@ router.get('/players/:id', (req, res) => {
     if (isNaN(playerId)) return res.status(400).json({ error: 'Invalid player ID' });
 
     const player = golfDb.prepare(`
-      SELECT p.id, p.username, p.first_name, p.last_name, p.email, p.phone, p.created_at,
+      SELECT p.id, p.username, p.first_name, p.last_name, p.email, p.phone, p.avatar, p.created_at,
              h.handicap_index,
              COUNT(s.id) AS score_count
       FROM players p
@@ -404,6 +404,29 @@ router.get('/leaderboard/weekly', (req, res) => {
     `).all(week, week);
 
     return res.status(200).json(rows);
+  } catch (err) {
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * GET /api/golf/contest-winners?event_date=YYYY-MM-DD
+ * Public endpoint: returns contest winners. If no date, returns all.
+ */
+router.get('/contest-winners', (req, res) => {
+  try {
+    const { event_date } = req.query;
+    let rows;
+    if (event_date) {
+      rows = golfDb.prepare(
+        'SELECT * FROM contest_winners WHERE event_date = ? ORDER BY category'
+      ).all(event_date);
+    } else {
+      rows = golfDb.prepare(
+        'SELECT * FROM contest_winners ORDER BY event_date DESC, category'
+      ).all();
+    }
+    return res.json(rows);
   } catch (err) {
     return res.status(500).json({ error: 'Internal server error' });
   }

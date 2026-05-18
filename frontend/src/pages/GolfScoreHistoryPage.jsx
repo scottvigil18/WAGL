@@ -21,7 +21,7 @@ export default function GolfScoreHistoryPage({ user }) {
   useEffect(() => { fetchScores() }, [])
 
   return (
-    <div className="golf-page">
+    <div className="golf-page golf-page-wide">
       <h2>📋 My Score History</h2>
 
       {error && <p className="golf-error">{error}</p>}
