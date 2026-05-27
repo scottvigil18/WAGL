@@ -1,10 +1,5 @@
-import { useState, useEffect, useCallback } from 'react'
-import Navbar from './components/Navbar'
-import HomePage from './pages/HomePage'
-import ProductPage from './pages/ProductPage'
-import CartPage from './pages/CartPage'
-import { getOrCreateSessionId } from './utils/session'
-import { fetchCart } from './api/cartApi'
+import { useState, useEffect } from 'react'
+import { getUser, clearToken } from './api/golfApi'
 
 // Golf imports
 import GolfLoginPage from './pages/GolfLoginPage'
@@ -24,7 +19,6 @@ import GolfContactPage from './pages/GolfContactPage'
 import GolfJoinPage from './pages/GolfJoinPage'
 import GolfNotificationsPage from './pages/GolfNotificationsPage'
 import GolfForceResetPage from './pages/GolfForceResetPage'
-import { getUser, clearToken } from './api/golfApi'
 
 // Simple client-side router using hash-based navigation
 function useRouter() {
@@ -52,30 +46,9 @@ function GolfRedirect() {
 
 export default function App() {
   const path = useRouter()
-  const [cart, setCart] = useState([])
-  const [cartLoading, setCartLoading] = useState(false)
-  const sessionId = getOrCreateSessionId()
 
   // Golf user state
   const [golfUser, setGolfUser] = useState(() => getUser())
-
-  const refreshCart = useCallback(async () => {
-    setCartLoading(true)
-    try {
-      const data = await fetchCart(sessionId)
-      setCart(data)
-    } catch (e) {
-      console.error('Failed to load cart', e)
-    } finally {
-      setCartLoading(false)
-    }
-  }, [sessionId])
-
-  useEffect(() => {
-    refreshCart()
-  }, [refreshCart])
-
-  const cartCount = cart.reduce((sum, item) => sum + item.qty, 0)
 
   function handleGolfLogin(user) {
     setGolfUser(user)
@@ -186,24 +159,6 @@ export default function App() {
     return <GolfSplashPage />
   }
 
-  // ShopMart route matching
-  let page
-  if (path.startsWith('#/product/')) {
-    const id = parseInt(path.replace('#/product/', ''))
-    page = <ProductPage productId={id} sessionId={sessionId} onCartChange={refreshCart} />
-  } else if (path === '#/cart') {
-    page = <CartPage cart={cart} sessionId={sessionId} onCartChange={refreshCart} cartLoading={cartLoading} />
-  } else {
-    page = <HomePage sessionId={sessionId} onCartChange={refreshCart} />
-  }
-
-  return (
-    <div className="app">
-      <Navbar cartCount={cartCount} />
-      <main>{page}</main>
-      <footer className="footer">
-        <p>© 2026 ShopMart. All rights reserved.</p>
-      </footer>
-    </div>
-  )
+  // No ShopMart routes — redirect everything else to splash
+  return <GolfSplashPage />
 }

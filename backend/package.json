@@ -1,7 +1,7 @@
 {
-  "name": "shopmart-backend",
+  "name": "wagl-backend",
   "version": "1.0.0",
-  "description": "ShopMart Node.js REST API",
+  "description": "WAGL Golf League API",
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",

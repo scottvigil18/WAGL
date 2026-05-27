@@ -2,8 +2,6 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 
-const productRoutes = require('./routes/products');
-const cartRoutes = require('./routes/cart');
 const golfAuthRoutes = require('./routes/golfAuth');
 const golfScoreRoutes = require('./routes/golfScores');
 const golfAdminRoutes = require('./routes/golfAdmin');
@@ -21,10 +19,6 @@ app.use(cors({
 }));
 
 app.use(express.json());
-
-// ─── API Routes ───────────────────────────────────────────────────────────────
-app.use('/api/products', productRoutes);
-app.use('/api/cart', cartRoutes);
 
 // ─── Golf League Routes ──────────────────────────────────────────────────────
 app.use('/api/golf', golfAuthRoutes);
@@ -47,6 +41,6 @@ seedAdmin();
 seedCourses();
 
 app.listen(PORT, () => {
-  console.log(`🚀 ShopMart API running at http://localhost:${PORT}`);
+  console.log(`⛳ WAGL API running at http://localhost:${PORT}`);
   console.log(`   Health: http://localhost:${PORT}/api/health`);
 });
