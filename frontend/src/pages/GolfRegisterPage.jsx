@@ -34,6 +34,8 @@ export default function GolfRegisterPage({ onLogin }) {
     }
   }
 
+  const [registered, setRegistered] = useState(false)
+
   async function handleSubmit(e) {
     e.preventDefault()
     setError('')
@@ -46,9 +48,7 @@ export default function GolfRegisterPage({ onLogin }) {
     setLoading(true)
     try {
       await register(username, password, email, phone, firstName, lastName)
-      const data = await login(username, password)
-      setToken(data.token)
-      onLogin({ id: data.id, username: data.username, role: data.role })
+      setRegistered(true)
     } catch (err) {
       setError(err.message)
     } finally {
@@ -60,6 +60,14 @@ export default function GolfRegisterPage({ onLogin }) {
     <div className="golf-auth-page">
       <div className="golf-auth-card">
         <h1>⛳ WAGL Register</h1>
+        {registered ? (
+          <div style={{ textAlign: 'center', padding: '20px 0' }}>
+            <p className="golf-success" style={{ fontSize: '1.1rem', marginBottom: 12 }}>✅ Registration submitted!</p>
+            <p style={{ color: 'var(--text-muted)' }}>Your account is pending admin approval. You'll be able to log in once approved.</p>
+            <a href="#/golf/login" className="btn btn-primary" style={{ marginTop: 16, display: 'inline-block' }}>Back to Login</a>
+          </div>
+        ) : (
+        <>
         <form onSubmit={handleSubmit} className="golf-form">
           <label htmlFor="reg-firstname">First Name</label>
           <input
@@ -139,6 +147,8 @@ export default function GolfRegisterPage({ onLogin }) {
         <p className="golf-auth-link">
           Already have an account? <a href="#/golf/login">Login</a>
         </p>
+        </>
+        )}
       </div>
     </div>
   )

@@ -72,14 +72,14 @@ async function recalculateHandicap(playerId) {
 router.get('/players', (req, res) => {
   try {
     const players = golfDb.prepare(`
-      SELECT p.id, p.username, p.first_name, p.last_name, p.email, p.phone, p.role, p.archived, p.created_at,
+      SELECT p.id, p.username, p.first_name, p.last_name, p.email, p.phone, p.role, p.archived, p.pending_approval, p.created_at,
              h.handicap_index,
              COUNT(s.id) AS score_count
       FROM players p
       LEFT JOIN handicaps h ON p.id = h.player_id
       LEFT JOIN scores s ON p.id = s.player_id
       GROUP BY p.id
-      ORDER BY p.archived ASC, p.username ASC
+      ORDER BY p.pending_approval DESC, p.archived ASC, p.username ASC
     `).all();
     return res.json(players);
   } catch (err) {
@@ -493,6 +493,50 @@ router.delete('/messages/:id', (req, res) => {
 });
 
 /**
+ * POST /api/golf/admin/players/:id/approve
+ * Approve a pending registration.
+ */
+router.post('/players/:id/approve', (req, res) => {
+  try {
+    const playerId = parseInt(req.params.id, 10);
+    if (isNaN(playerId)) return res.status(400).json({ error: 'Invalid player ID' });
+
+    const player = golfDb.prepare('SELECT id, username FROM players WHERE id = ?').get(playerId);
+    if (!player) return res.status(404).json({ error: 'Player not found' });
+
+    golfDb.prepare('UPDATE players SET pending_approval = 0 WHERE id = ?').run(playerId);
+
+    // Notify the player
+    golfDb.prepare(
+      'INSERT INTO notifications (player_id, subject, body) VALUES (?, ?, ?)'
+    ).run(playerId, 'Registration Approved!', 'Welcome to WAGL! Your account has been approved. You can now log in and start playing.');
+
+    return res.json({ message: 'Player approved' });
+  } catch (err) {
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * POST /api/golf/admin/players/:id/deny
+ * Deny and delete a pending registration.
+ */
+router.post('/players/:id/deny', (req, res) => {
+  try {
+    const playerId = parseInt(req.params.id, 10);
+    if (isNaN(playerId)) return res.status(400).json({ error: 'Invalid player ID' });
+
+    const player = golfDb.prepare('SELECT id FROM players WHERE id = ? AND pending_approval = 1').get(playerId);
+    if (!player) return res.status(404).json({ error: 'Pending player not found' });
+
+    golfDb.prepare('DELETE FROM players WHERE id = ?').run(playerId);
+    return res.json({ message: 'Registration denied and account deleted' });
+  } catch (err) {
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
  * POST /api/golf/admin/players/:id/force-reset
  * Force a user to reset their password on next login.
  */
@@ -506,6 +550,78 @@ router.post('/players/:id/force-reset', (req, res) => {
 
     golfDb.prepare('UPDATE players SET force_password_reset = 1 WHERE id = ?').run(playerId);
     return res.json({ message: 'Password reset forced for next login' });
+  } catch (err) {
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * GET /api/golf/admin/settings/max-players
+ * Get the current max players setting.
+ */
+router.get('/settings/max-players', (req, res) => {
+  try {
+    const setting = golfDb.prepare("SELECT value FROM league_settings WHERE key = 'max_players'").get();
+    const currentCount = golfDb.prepare("SELECT COUNT(*) AS count FROM players WHERE role = 'player' AND (archived IS NULL OR archived = 0)").get();
+    return res.json({
+      max_players: setting ? parseInt(setting.value, 10) : 50,
+      current_count: currentCount.count,
+    });
+  } catch (err) {
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * PUT /api/golf/admin/settings/max-players
+ * Set the max players cap (0-100).
+ */
+router.put('/settings/max-players', (req, res) => {
+  try {
+    const { max_players } = req.body;
+    const value = parseInt(max_players, 10);
+    if (isNaN(value) || value < 0 || value > 100) {
+      return res.status(400).json({ error: 'max_players must be between 0 and 100' });
+    }
+
+    golfDb.prepare("INSERT OR REPLACE INTO league_settings (key, value) VALUES ('max_players', ?)").run(String(value));
+    return res.json({ max_players: value });
+  } catch (err) {
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * DELETE /api/golf/admin/scores/year/:year
+ * Delete all scores for a specific year. Handicaps are preserved.
+ */
+router.delete('/scores/year/:year', (req, res) => {
+  try {
+    const year = parseInt(req.params.year, 10);
+    if (isNaN(year) || year < 2000 || year > 2100) {
+      return res.status(400).json({ error: 'Invalid year' });
+    }
+
+    const result = golfDb.prepare(
+      "DELETE FROM scores WHERE strftime('%Y', date_played) = ?"
+    ).run(String(year));
+
+    return res.json({ message: `Deleted ${result.changes} scores from ${year}. Handicaps preserved.` });
+  } catch (err) {
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * GET /api/golf/admin/scores/years
+ * Get list of years that have scores.
+ */
+router.get('/scores/years', (req, res) => {
+  try {
+    const years = golfDb.prepare(
+      "SELECT DISTINCT strftime('%Y', date_played) AS year, COUNT(*) AS count FROM scores GROUP BY year ORDER BY year DESC"
+    ).all();
+    return res.json(years);
   } catch (err) {
     return res.status(500).json({ error: 'Internal server error' });
   }

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { getLeaderboard, getWeeks, getWeeklyLeaderboard, getContestWinners } from '../api/golfApi'
+import { getLeaderboard, getWeeks, getWeeklyLeaderboard, getContestWinners, getSeasons } from '../api/golfApi'
 import { WAGL_SCHEDULE, isEventPlayed, formatEventDate } from '../utils/waglSchedule'
 
 const TABS = ['Season Standings', 'Weekly Scores', 'Contest Winners']
@@ -38,17 +38,33 @@ function SeasonStandings() {
   const [players, setPlayers] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [flightFilter, setFlightFilter] = useState('all') // 'all' | 'low' | 'mid' | 'high'
+  const [flightFilter, setFlightFilter] = useState('all')
+  const [seasons, setSeasons] = useState([])
+  const [selectedYear, setSelectedYear] = useState('')
+  const [currentPage, setCurrentPage] = useState(1)
+  const PAGE_SIZE = 10
 
-  async function load() {
+  async function load(year) {
     setLoading(true)
     setError('')
-    try { setPlayers(await getLeaderboard()) }
+    try { setPlayers(await getLeaderboard(year || undefined)) }
     catch (e) { setError(e.message) }
     finally { setLoading(false) }
   }
 
-  useEffect(() => { load() }, [])
+  useEffect(() => {
+    getSeasons().then(yrs => {
+      setSeasons(yrs)
+      const currentYear = new Date().getFullYear().toString()
+      const defaultYear = yrs.includes(currentYear) ? currentYear : (yrs[0] || '')
+      setSelectedYear(defaultYear)
+    }).catch(() => {})
+  }, [])
+
+  useEffect(() => {
+    if (selectedYear) load(selectedYear)
+    else load()
+  }, [selectedYear])
 
   if (loading) return <p className="golf-loading">Loading standings…</p>
   if (error)   return <p className="golf-error">{error}</p>
@@ -68,21 +84,29 @@ function SeasonStandings() {
     return 'high'
   }
 
-  const filteredPlayers = flightFilter === 'all'
+  const filteredPlayers = (flightFilter === 'all'
     ? players
     : players.filter(p => getPlayerFlight(p) === flightFilter)
+  ).sort((a, b) => (b.season_total_points || 0) - (a.season_total_points || 0))
+
+  const totalPages = Math.ceil(filteredPlayers.length / PAGE_SIZE)
+  const paginatedPlayers = filteredPlayers.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
 
   return (
     <>
       <div className="leaderboard-refresh-row">
         <div className="flight-filter">
-          <span className="weekly-label">Flight:</span>
-          <button className={`btn btn-small${flightFilter === 'all' ? ' btn-primary' : ' btn-secondary'}`} onClick={() => setFlightFilter('all')}>All</button>
-          <button className={`btn btn-small${flightFilter === 'low' ? ' btn-primary' : ' btn-secondary'}`} onClick={() => setFlightFilter('low')}>Low</button>
-          <button className={`btn btn-small${flightFilter === 'mid' ? ' btn-primary' : ' btn-secondary'}`} onClick={() => setFlightFilter('mid')}>Mid</button>
-          <button className={`btn btn-small${flightFilter === 'high' ? ' btn-primary' : ' btn-secondary'}`} onClick={() => setFlightFilter('high')}>High</button>
+          <span className="weekly-label">Season:</span>
+          <select className="weekly-select" style={{ minWidth: 90 }} value={selectedYear} onChange={e => setSelectedYear(e.target.value)}>
+            {seasons.map(y => <option key={y} value={y}>{y}</option>)}
+          </select>
+          <span className="weekly-label" style={{ marginLeft: 16 }}>Flight:</span>
+          <button className={`btn btn-small${flightFilter === 'all' ? ' btn-primary' : ' btn-secondary'}`} onClick={() => { setFlightFilter('all'); setCurrentPage(1) }}>All</button>
+          <button className={`btn btn-small${flightFilter === 'low' ? ' btn-primary' : ' btn-secondary'}`} onClick={() => { setFlightFilter('low'); setCurrentPage(1) }}>Low</button>
+          <button className={`btn btn-small${flightFilter === 'mid' ? ' btn-primary' : ' btn-secondary'}`} onClick={() => { setFlightFilter('mid'); setCurrentPage(1) }}>Mid</button>
+          <button className={`btn btn-small${flightFilter === 'high' ? ' btn-primary' : ' btn-secondary'}`} onClick={() => { setFlightFilter('high'); setCurrentPage(1) }}>High</button>
         </div>
-        <button className="btn btn-secondary btn-small" onClick={load} disabled={loading}>
+        <button className="btn btn-secondary btn-small" onClick={() => load(selectedYear)} disabled={loading}>
           Refresh
         </button>
       </div>
@@ -102,12 +126,14 @@ function SeasonStandings() {
             </tr>
           </thead>
           <tbody>
-            {filteredPlayers.map((p, idx) => (
+            {paginatedPlayers.map((p, idx) => {
+              const rank = (currentPage - 1) * PAGE_SIZE + idx
+              return (
               <tr key={p.id}>
                 <td className="rank-cell">
-                  {idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : idx + 1}
+                  {rank === 0 ? '🥇' : rank === 1 ? '🥈' : rank === 2 ? '🥉' : rank + 1}
                 </td>
-                <td><a href={`#/golf/player/${p.id}`} className="player-link"><strong>{p.username}</strong></a></td>
+                <td><a href={`#/golf/player/${p.id}`} className="player-link"><strong>{p.first_name || p.username} {p.last_name || ''}</strong></a></td>
                 <td>{p.handicap_index != null ? p.handicap_index.toFixed(1) : '—'}</td>
                 <td className="points-cell">
                   {p.season_total_points != null
@@ -124,13 +150,24 @@ function SeasonStandings() {
                 <td>{p.scored_this_week ? (p.course_name ?? '—') : ''}</td>
                 <td>{p.date_played ?? '—'}</td>
               </tr>
-            ))}
+            )})}
           </tbody>
         </table>
       </div>
       <p className="leaderboard-note">
-        ℹ️ Weekly points calculation coming soon — standings currently sorted by handicap index.
+        ℹ️ Points: 3 base + 0-4 bonus (within flight). Max 7 per week.
       </p>
+      {totalPages > 1 && (
+        <div className="pagination-controls">
+          <button className="btn btn-small btn-secondary" onClick={() => setCurrentPage(pg => Math.max(1, pg - 1))} disabled={currentPage === 1}>
+            ← Prev
+          </button>
+          <span className="pagination-info">Page {currentPage} of {totalPages} ({filteredPlayers.length} players)</span>
+          <button className="btn btn-small btn-secondary" onClick={() => setCurrentPage(pg => Math.min(totalPages, pg + 1))} disabled={currentPage === totalPages}>
+            Next →
+          </button>
+        </div>
+      )}
     </>
   )
 }

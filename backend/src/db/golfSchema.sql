@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS players (
   archived      INTEGER NOT NULL DEFAULT 0,
   avatar        TEXT    DEFAULT NULL,
   force_password_reset INTEGER NOT NULL DEFAULT 0,
+  pending_approval INTEGER NOT NULL DEFAULT 0,
   created_at    TEXT    NOT NULL DEFAULT (datetime('now'))
 );
 
@@ -114,3 +115,11 @@ CREATE TABLE IF NOT EXISTS contest_winners (
 );
 
 CREATE INDEX IF NOT EXISTS idx_contest_winners_date ON contest_winners(event_date);
+
+-- League Settings table
+CREATE TABLE IF NOT EXISTS league_settings (
+  key   TEXT PRIMARY KEY,
+  value TEXT NOT NULL
+);
+
+INSERT OR IGNORE INTO league_settings (key, value) VALUES ('max_players', '50');

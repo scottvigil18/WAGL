@@ -58,10 +58,18 @@ export async function login(username, password) {
   return data
 }
 
-export async function getLeaderboard() {
-  const res = await fetch('/api/golf/leaderboard')
+export async function getLeaderboard(year) {
+  const url = year ? `/api/golf/leaderboard?year=${year}` : '/api/golf/leaderboard'
+  const res = await fetch(url)
   const data = await res.json()
   if (!res.ok) throw new Error(data.error || 'Failed to fetch leaderboard')
+  return data
+}
+
+export async function getSeasons() {
+  const res = await fetch('/api/golf/seasons')
+  const data = await res.json()
+  if (!res.ok) throw new Error(data.error || 'Failed to fetch seasons')
   return data
 }
 
@@ -328,6 +336,44 @@ export async function adminForcePasswordReset(id) {
   })
   const data = await res.json()
   if (!res.ok) throw new Error(data.error || 'Failed to force password reset')
+  return data
+}
+
+export async function adminApproveRegistration(id) {
+  const res = await fetch(`/api/golf/admin/players/${id}/approve`, {
+    method: 'POST',
+    headers: authHeaders(),
+  })
+  const data = await res.json()
+  if (!res.ok) throw new Error(data.error || 'Failed to approve')
+  return data
+}
+
+export async function adminDenyRegistration(id) {
+  const res = await fetch(`/api/golf/admin/players/${id}/deny`, {
+    method: 'POST',
+    headers: authHeaders(),
+  })
+  const data = await res.json()
+  if (!res.ok) throw new Error(data.error || 'Failed to deny')
+  return data
+}
+
+export async function adminGetMaxPlayers() {
+  const res = await fetch('/api/golf/admin/settings/max-players', { headers: authHeaders() })
+  const data = await res.json()
+  if (!res.ok) throw new Error(data.error || 'Failed to get setting')
+  return data
+}
+
+export async function adminSetMaxPlayers(maxPlayers) {
+  const res = await fetch('/api/golf/admin/settings/max-players', {
+    method: 'PUT',
+    headers: authHeaders(),
+    body: JSON.stringify({ max_players: maxPlayers }),
+  })
+  const data = await res.json()
+  if (!res.ok) throw new Error(data.error || 'Failed to update setting')
   return data
 }
 

@@ -73,8 +73,10 @@ router.post('/register', (req, res) => {
     }
 
     // Check league cap
-    const playerCount = golfDb.prepare('SELECT COUNT(*) AS count FROM players').get();
-    if (playerCount.count >= LEAGUE_MAX_PLAYERS) {
+    const maxSetting = golfDb.prepare("SELECT value FROM league_settings WHERE key = 'max_players'").get();
+    const maxPlayers = maxSetting ? parseInt(maxSetting.value, 10) : 50;
+    const playerCount = golfDb.prepare('SELECT COUNT(*) AS count FROM players WHERE role = ? AND (archived IS NULL OR archived = 0)').get('player');
+    if (playerCount.count >= maxPlayers) {
       return res.status(403).json({ error: 'League is full' });
     }
 
@@ -87,12 +89,18 @@ router.post('/register', (req, res) => {
     // Hash password and insert
     const passwordHash = bcrypt.hashSync(password, 10);
     const result = golfDb.prepare(
-      "INSERT INTO players (username, password_hash, first_name, last_name, email, phone, role) VALUES (?, ?, ?, ?, ?, ?, 'player')"
+      "INSERT INTO players (username, password_hash, first_name, last_name, email, phone, role, pending_approval) VALUES (?, ?, ?, ?, ?, ?, 'player', 1)"
     ).run(username.trim(), passwordHash, first_name.trim(), last_name.trim(), email.trim().toLowerCase(), phone.trim());
+
+    // Notify admin
+    golfDb.prepare(
+      'INSERT INTO messages (player_id, subject, body) VALUES (?, ?, ?)'
+    ).run(result.lastInsertRowid, 'New Registration Request', `${first_name.trim()} ${last_name.trim()} (${username.trim()}) has requested to join the league. Please approve or deny from the Admin > Players tab.`);
 
     return res.status(201).json({
       id: result.lastInsertRowid,
-      username: username.trim()
+      username: username.trim(),
+      pending: true
     });
   } catch (err) {
     // Handle unique constraint violation (race condition)
@@ -118,11 +126,16 @@ router.post('/login', (req, res) => {
 
     // Find user
     const player = golfDb.prepare(
-      'SELECT id, username, password_hash, role, force_password_reset FROM players WHERE username = ?'
+      'SELECT id, username, password_hash, role, force_password_reset, pending_approval FROM players WHERE username = ?'
     ).get(username);
 
     if (!player) {
       return res.status(401).json({ error: 'Invalid credentials' });
+    }
+
+    // Block pending accounts
+    if (player.pending_approval === 1) {
+      return res.status(403).json({ error: 'Your account is pending admin approval. Please check back later.' });
     }
 
     // Verify password

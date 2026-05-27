@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import {
   adminGetPlayers, adminUpdatePlayer, adminDeletePlayer,
   adminArchivePlayer, adminUnarchivePlayer, adminForcePasswordReset,
+  adminApproveRegistration, adminDenyRegistration, adminGetMaxPlayers, adminSetMaxPlayers,
   adminGetScores, adminAddScore, adminUpdateScore, adminDeleteScore,
   adminImportCsv, adminGetMessages, adminMarkMessageRead, adminDeleteMessage,
   adminBroadcast, adminGetUnreadCount, getContestWinners, adminSaveContestWinner, getCourses,
@@ -9,7 +10,7 @@ import {
 import { formatPhoneInput, formatPhoneDisplay } from '../utils/formatPhone'
 import { WAGL_SCHEDULE, formatEventDate } from '../utils/waglSchedule'
 
-const TABS = ['Players', 'Scores', 'Contest Winners', 'Messages', 'CSV Import']
+const TABS = ['Players', 'Scores', 'Contest Winners', 'Messages', 'Handicap', 'CSV Import']
 
 export default function GolfAdminPage() {
   const [activeTab, setActiveTab] = useState('Players')
@@ -39,6 +40,7 @@ export default function GolfAdminPage() {
         {activeTab === 'Scores'          && <ScoresTab />}
         {activeTab === 'Contest Winners' && <ContestWinnersTab />}
         {activeTab === 'Messages'        && <MessagesTab />}
+        {activeTab === 'Handicap'        && <HandicapTab />}
         {activeTab === 'CSV Import'      && <CsvImportTab />}
       </div>
     </div>
@@ -349,14 +351,25 @@ function PlayersTab() {
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState('')
   const [showArchived, setShowArchived] = useState(false)
+  const [maxPlayers, setMaxPlayers] = useState(50)
+  const [currentCount, setCurrentCount] = useState(0)
 
   useEffect(() => { load() }, [])
+  useEffect(() => {
+    adminGetMaxPlayers().then(d => { setMaxPlayers(d.max_players); setCurrentCount(d.current_count) }).catch(() => {})
+  }, [])
 
   async function load() {
     setLoading(true)
     try { setPlayers(await adminGetPlayers()) }
     catch (e) { setError(e.message) }
     finally { setLoading(false) }
+  }
+
+  async function adjustMaxPlayers(delta) {
+    const newVal = Math.max(0, Math.min(100, maxPlayers + delta))
+    setMaxPlayers(newVal)
+    try { await adminSetMaxPlayers(newVal) } catch (e) { setMsg(e.message) }
   }
 
   function startEdit(p) {
@@ -404,6 +417,23 @@ function PlayersTab() {
     } catch (e) { setMsg(e.message) }
   }
 
+  async function approveReg(id, username) {
+    try {
+      await adminApproveRegistration(id)
+      setPlayers(prev => prev.map(p => p.id === id ? { ...p, pending_approval: 0 } : p))
+      setMsg(`"${username}" approved!`)
+    } catch (e) { setMsg(e.message) }
+  }
+
+  async function denyReg(id, username) {
+    if (!confirm(`Deny and delete "${username}"'s registration?`)) return
+    try {
+      await adminDenyRegistration(id)
+      setPlayers(prev => prev.filter(p => p.id !== id))
+      setMsg(`"${username}" denied.`)
+    } catch (e) { setMsg(e.message) }
+  }
+
   async function unarchivePlayer(id, username) {
     if (!confirm(`Restore "${username}" to active status?`)) return
     try {
@@ -425,16 +455,51 @@ function PlayersTab() {
   if (loading) return <p className="golf-loading">Loading players…</p>
   if (error) return <p className="golf-error">{error}</p>
 
-  const activePlayers = players.filter(p => !p.archived)
+  const pendingPlayers = players.filter(p => p.pending_approval === 1)
+  const activePlayers = players.filter(p => !p.archived && !p.pending_approval)
   const archivedPlayers = players.filter(p => p.archived)
 
   return (
     <div>
       <div className="admin-section-header">
         <h3>Player Management</h3>
-        <span className="admin-count">{activePlayers.length} active, {archivedPlayers.length} archived</span>
+        <span className="admin-count">{activePlayers.length} active, {archivedPlayers.length} archived{pendingPlayers.length > 0 ? `, ${pendingPlayers.length} pending` : ''}</span>
+        <div className="start-time-adjuster" style={{ marginLeft: 'auto' }}>
+          <span className="weekly-label">Max Players:</span>
+          <button className="btn btn-small btn-secondary" onClick={() => adjustMaxPlayers(-1)}>▼</button>
+          <span className="start-time-display">{maxPlayers}</span>
+          <button className="btn btn-small btn-secondary" onClick={() => adjustMaxPlayers(1)}>▲</button>
+          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>({currentCount} active)</span>
+        </div>
       </div>
       {msg && <p className="golf-success">{msg}</p>}
+
+      {pendingPlayers.length > 0 && (
+        <div className="pending-photos-section" style={{ marginBottom: 20 }}>
+          <h3>⏳ Pending Registrations ({pendingPlayers.length})</h3>
+          <div className="golf-table-wrap">
+            <table className="golf-table" style={{ tableLayout: 'auto' }}>
+              <thead>
+                <tr><th>Name</th><th>Username</th><th>Email</th><th>Phone</th><th>Actions</th></tr>
+              </thead>
+              <tbody>
+                {pendingPlayers.map(p => (
+                  <tr key={p.id}>
+                    <td><strong>{p.first_name} {p.last_name}</strong></td>
+                    <td>{p.username}</td>
+                    <td>{p.email || '—'}</td>
+                    <td>{p.phone || '—'}</td>
+                    <td className="admin-actions">
+                      <button className="btn btn-small btn-primary" onClick={() => approveReg(p.id, p.username)}>✓ Approve</button>
+                      <button className="btn btn-small btn-danger" onClick={() => denyReg(p.id, p.username)}>✕ Deny</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       <div className="golf-table-wrap">
         <table className="golf-table">
@@ -683,6 +748,85 @@ function ContestWinnersTab() {
           {saving ? 'Saving…' : 'Save Winners'}
         </button>
       </form>
+    </div>
+  )
+}
+
+// ─── Handicap Tab ─────────────────────────────────────────────────────────────
+
+function HandicapTab() {
+  return (
+    <div>
+      <div className="admin-section-header">
+        <h3>Handicap Calculation Method</h3>
+      </div>
+      <div className="handicap-explanation">
+        <h4>WAGL Handicap Formula</h4>
+        <p>The WAGL handicap represents a player's average strokes <strong>over par</strong> for 9 holes, rounded to the nearest whole number.</p>
+
+        <div className="handicap-steps">
+          <div className="handicap-step">
+            <span className="handicap-step-num">1</span>
+            <div>
+              <strong>Collect Recent Scores</strong>
+              <p>Take the player's last 20 scores (or all scores if fewer than 20).</p>
+            </div>
+          </div>
+          <div className="handicap-step">
+            <span className="handicap-step-num">2</span>
+            <div>
+              <strong>Calculate Over Par</strong>
+              <p>For each score, subtract par (36 for 9 holes).</p>
+              <p className="handicap-example">Example: Score of 42 → 42 - 36 = <strong>6 over par</strong></p>
+            </div>
+          </div>
+          <div className="handicap-step">
+            <span className="handicap-step-num">3</span>
+            <div>
+              <strong>Use Best 75%</strong>
+              <p>Sort the over-par values from lowest to highest. Use only the best 75% (drop the worst 25%).</p>
+              <p className="handicap-example">Example: 20 scores → use the best 15</p>
+            </div>
+          </div>
+          <div className="handicap-step">
+            <span className="handicap-step-num">4</span>
+            <div>
+              <strong>Average & Round</strong>
+              <p>Average the remaining over-par values and round to the nearest whole number.</p>
+              <p className="handicap-example">Example: Average of best 15 = 8.3 → Handicap = <strong>8</strong></p>
+            </div>
+          </div>
+        </div>
+
+        <h4 style={{marginTop: 24}}>Weekly Points System</h4>
+        <table className="golf-table" style={{maxWidth: 500, tableLayout: 'auto'}}>
+          <thead>
+            <tr><th>Component</th><th>Points</th><th>Description</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Base</td><td><strong>3</strong></td><td>Awarded for playing (everyone who submits a score)</td></tr>
+            <tr><td>Bonus</td><td><strong>0–4</strong></td><td>Based on performance within flight (best = 4, worst = 0)</td></tr>
+            <tr><td>Total</td><td><strong>3–7</strong></td><td>Maximum possible per week</td></tr>
+          </tbody>
+        </table>
+
+        <h4 style={{marginTop: 24}}>Flight Assignments</h4>
+        <p>Players are divided into 3 flights based on handicap:</p>
+        <ul>
+          <li><strong>Low Flight</strong> — Top third (lowest handicaps)</li>
+          <li><strong>Mid Flight</strong> — Middle third</li>
+          <li><strong>High Flight</strong> — Bottom third (highest handicaps)</li>
+        </ul>
+        <p>Bonus points are calculated <em>within</em> each flight, so players compete against others of similar skill level.</p>
+
+        <h4 style={{marginTop: 24}}>Key Rules</h4>
+        <ul>
+          <li>Par for 9 holes = 36</li>
+          <li>Handicaps persist across seasons (not deleted when scores are archived)</li>
+          <li>Handicaps update automatically when new scores are submitted</li>
+          <li>Season total points accumulate across all weeks in the selected year</li>
+        </ul>
+      </div>
     </div>
   )
 }

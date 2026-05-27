@@ -108,6 +108,13 @@ if (!hasForceReset) {
   golfDb.exec("ALTER TABLE players ADD COLUMN force_password_reset INTEGER NOT NULL DEFAULT 0");
 }
 
+// Migration: add pending_approval column
+const playerCols5 = golfDb.prepare("PRAGMA table_info(players)").all();
+const hasPending = playerCols5.some(col => col.name === 'pending_approval');
+if (!hasPending) {
+  golfDb.exec("ALTER TABLE players ADD COLUMN pending_approval INTEGER NOT NULL DEFAULT 0");
+}
+
 // Migration: add approved column to photos if it doesn't exist
 try {
   const photoCols = golfDb.prepare("PRAGMA table_info(photos)").all();

@@ -2,6 +2,7 @@ const express = require('express');
 const golfDb = require('../db/golfDatabase');
 const { authMiddleware, adminMiddleware } = require('../middleware/golfAuth');
 const { calculateHandicap } = require('../services/handicapClient');
+const { calculateWeeklyPoints, recalculateWaglHandicap } = require('../services/waglScoring');
 
 const router = express.Router();
 
@@ -62,41 +63,10 @@ function isValidDate(value) {
 }
 
 /**
- * Recalculates and upserts the handicap for a given player.
- * Uses each score's associated course rating/slope for differential calculation.
+ * Recalculates and upserts the handicap for a given player using WAGL method.
  */
 async function recalculateHandicap(playerId) {
-  const rows = golfDb.prepare(
-    `SELECT s.score, c.course_rating, c.slope_rating
-     FROM scores s
-     LEFT JOIN courses c ON s.course_id = c.id
-     WHERE s.player_id = ?
-     ORDER BY s.date_played DESC`
-  ).all(playerId);
-
-  const scores = rows.map((r) => r.score);
-  // Use the most common course rating or default
-  const courseRating = rows.length > 0 && rows[0].course_rating ? rows[0].course_rating : DEFAULT_COURSE_RATING;
-  const slopeRating = rows.length > 0 && rows[0].slope_rating ? rows[0].slope_rating : DEFAULT_SLOPE_RATING;
-
-  const result = await calculateHandicap(scores, courseRating, slopeRating);
-
-  // Upsert handicap
-  const existing = golfDb.prepare(
-    'SELECT id FROM handicaps WHERE player_id = ?'
-  ).get(playerId);
-
-  if (existing) {
-    golfDb.prepare(
-      "UPDATE handicaps SET handicap_index = ?, updated_at = datetime('now') WHERE player_id = ?"
-    ).run(result.handicap_index, playerId);
-  } else {
-    golfDb.prepare(
-      'INSERT INTO handicaps (player_id, handicap_index) VALUES (?, ?)'
-    ).run(playerId, result.handicap_index);
-  }
-
-  return result;
+  return recalculateWaglHandicap(playerId);
 }
 
 /**
@@ -274,10 +244,16 @@ router.get('/scores/me', authMiddleware, (req, res) => {
  */
 router.get('/leaderboard', (req, res) => {
   try {
+    const { year } = req.query;
+    const yearFilter = year ? `AND strftime('%Y', s1.date_played) = '${parseInt(year, 10)}'` : '';
+    const yearFilterScores = year ? `AND strftime('%Y', date_played) = '${parseInt(year, 10)}'` : '';
+
     const leaderboard = golfDb.prepare(`
       SELECT
         p.id,
         p.username,
+        p.first_name,
+        p.last_name,
         rs.score AS most_recent_score,
         rs.holes,
         rs.date_played,
@@ -297,8 +273,10 @@ router.get('/leaderboard', (req, res) => {
         INNER JOIN (
           SELECT player_id, MAX(date_played) AS max_date
           FROM scores
+          WHERE 1=1 ${yearFilterScores}
           GROUP BY player_id
         ) s2 ON s1.player_id = s2.player_id AND s1.date_played = s2.max_date
+        WHERE 1=1 ${yearFilter}
       ) rs ON p.id = rs.player_id
       LEFT JOIN handicaps h ON p.id = h.player_id
       WHERE p.role = 'player' AND (p.archived IS NULL OR p.archived = 0)
@@ -307,8 +285,35 @@ router.get('/leaderboard', (req, res) => {
         h.handicap_index ASC
     `).all();
 
-    return res.status(200).json(leaderboard);
+    // Calculate season total points for each player
+    // Get all unique dates that have scores (filtered by year if specified)
+    const allDates = golfDb.prepare(
+      `SELECT DISTINCT date_played FROM scores WHERE 1=1 ${yearFilterScores} ORDER BY date_played`
+    ).all().map(r => r.date_played);
+
+    // Calculate points for each date and accumulate per player
+    const seasonPoints = {};
+    const lastWeekPoints = {};
+
+    for (const date of allDates) {
+      const weeklyPts = calculateWeeklyPoints(date);
+      for (const wp of weeklyPts) {
+        if (!seasonPoints[wp.player_id]) seasonPoints[wp.player_id] = 0;
+        seasonPoints[wp.player_id] += wp.total_pts;
+        lastWeekPoints[wp.player_id] = wp.total_pts; // last date's points
+      }
+    }
+
+    // Attach points to leaderboard
+    const result = leaderboard.map(p => ({
+      ...p,
+      season_total_points: seasonPoints[p.id] || null,
+      weekly_points: lastWeekPoints[p.id] || null,
+    }));
+
+    return res.status(200).json(result);
   } catch (err) {
+    console.error('Leaderboard error:', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -363,8 +368,7 @@ router.get('/leaderboard/weekly', (req, res) => {
           c.name AS course_name,
           c.course_rating,
           c.slope_rating,
-          h.handicap_index,
-          NULL AS weekly_points
+          h.handicap_index
         FROM scores s
         JOIN players p ON s.player_id = p.id
         LEFT JOIN courses c ON s.course_id = c.id
@@ -372,7 +376,21 @@ router.get('/leaderboard/weekly', (req, res) => {
         WHERE p.role = 'player' AND (p.archived IS NULL OR p.archived = 0)
         ORDER BY s.date_played DESC, s.score ASC
       `).all();
-      return res.status(200).json(rows);
+
+      // Calculate points for each unique date
+      const dateSet = [...new Set(rows.map(r => r.date_played))];
+      const pointsMap = {};
+      for (const d of dateSet) {
+        const pts = calculateWeeklyPoints(d);
+        for (const wp of pts) {
+          pointsMap[`${wp.player_id}_${d}`] = wp.total_pts;
+        }
+      }
+      const result = rows.map(r => ({
+        ...r,
+        weekly_points: pointsMap[`${r.id}_${r.date_played}`] || null,
+      }));
+      return res.status(200).json(result);
     }
 
     if (!/^\d{4}-\d{2}-\d{2}$/.test(week)) {
@@ -392,8 +410,7 @@ router.get('/leaderboard/weekly', (req, res) => {
         c.name AS course_name,
         c.course_rating,
         c.slope_rating,
-        h.handicap_index,
-        NULL AS weekly_points
+        h.handicap_index
       FROM scores s
       JOIN players p ON s.player_id = p.id
       LEFT JOIN courses c ON s.course_id = c.id
@@ -403,7 +420,36 @@ router.get('/leaderboard/weekly', (req, res) => {
       ORDER BY s.score ASC, p.username ASC
     `).all(week, week);
 
-    return res.status(200).json(rows);
+    // Calculate points for the matched dates
+    const dateSet = [...new Set(rows.map(r => r.date_played))];
+    const pointsMap = {};
+    for (const d of dateSet) {
+      const pts = calculateWeeklyPoints(d);
+      for (const wp of pts) {
+        pointsMap[`${wp.player_id}_${d}`] = wp.total_pts;
+      }
+    }
+    const result = rows.map(r => ({
+      ...r,
+      weekly_points: pointsMap[`${r.id}_${r.date_played}`] || null,
+    }));
+
+    return res.status(200).json(result);
+  } catch (err) {
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * GET /api/golf/seasons
+ * Public endpoint: returns list of years that have scores.
+ */
+router.get('/seasons', (req, res) => {
+  try {
+    const years = golfDb.prepare(
+      "SELECT DISTINCT strftime('%Y', date_played) AS year FROM scores ORDER BY year DESC"
+    ).all();
+    return res.json(years.map(r => r.year));
   } catch (err) {
     return res.status(500).json({ error: 'Internal server error' });
   }

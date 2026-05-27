@@ -2041,3 +2041,86 @@
   align-items: center;
   margin-bottom: 12px;
 }
+
+/* ─── Handicap Explanation ─────────────────────────────────────────────────── */
+.handicap-explanation {
+  line-height: 1.7;
+}
+
+.handicap-explanation h4 {
+  color: #166534;
+  margin-bottom: 12px;
+}
+
+.handicap-explanation p {
+  margin-bottom: 8px;
+}
+
+.handicap-explanation ul {
+  padding-left: 20px;
+  margin-bottom: 12px;
+}
+
+.handicap-explanation li {
+  margin-bottom: 4px;
+}
+
+.handicap-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 16px 0;
+}
+
+.handicap-step {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 8px;
+  padding: 14px 16px;
+}
+
+.handicap-step-num {
+  background: #166534;
+  color: #fff;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.85rem;
+  flex-shrink: 0;
+}
+
+.handicap-step p {
+  margin: 4px 0 0;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+.handicap-example {
+  background: #f8fafc;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  display: inline-block;
+  margin-top: 4px;
+}
+
+/* ─── Pagination ───────────────────────────────────────────────────────────── */
+.pagination-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.pagination-info {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
