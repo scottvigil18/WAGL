@@ -40,6 +40,18 @@ function ScheduleTab() {
   today.setHours(0, 0, 0, 0)
   const nextEventIdx = WAGL_SCHEDULE.findIndex(e => new Date(e.date + 'T00:00:00') >= today)
 
+  // Check if an event is currently in progress (event day, 4PM-9PM Mountain Time)
+  function isInProgress(evtDate) {
+    const now = new Date()
+    const evtDay = new Date(evtDate + 'T00:00:00')
+    // Check if today is the event date
+    if (now.getFullYear() !== evtDay.getFullYear() || now.getMonth() !== evtDay.getMonth() || now.getDate() !== evtDay.getDate()) return false
+    // Mountain Time offset: UTC-6 (MDT) or UTC-7 (MST)
+    // Use local time since the user is in Mountain Time
+    const hour = now.getHours()
+    return hour >= 16 && hour < 21 // 4PM to 9PM
+  }
+
   return (
     <div>
       <p className="schedule-legend">
@@ -54,6 +66,7 @@ function ScheduleTab() {
               <th>Date</th>
               <th>Time</th>
               <th>Course</th>
+              <th>Contest</th>
               <th>Status</th>
             </tr>
           </thead>
@@ -61,21 +74,25 @@ function ScheduleTab() {
             {WAGL_SCHEDULE.map((evt, idx) => {
               const played = isEventPlayed(evt.date)
               const isNext = idx === nextEventIdx
+              const inProgress = isInProgress(evt.date)
               return (
                 <tr
                   key={evt.event}
-                  className={played ? 'schedule-row-played' : isNext ? 'schedule-row-next' : 'schedule-row-upcoming'}
+                  className={inProgress ? 'schedule-row-next' : played ? 'schedule-row-played' : isNext ? 'schedule-row-next' : 'schedule-row-upcoming'}
                 >
                   <td>{evt.event}</td>
                   <td>{formatEventDate(evt.date)}</td>
                   <td>{evt.time}</td>
                   <td>{evt.course}</td>
+                  <td>{evt.contest}</td>
                   <td>
-                    {played
-                      ? <span className="schedule-status played">Played</span>
-                      : isNext
-                        ? <span className="schedule-status next">Next Up</span>
-                        : <span className="schedule-status upcoming">Upcoming</span>}
+                    {inProgress
+                      ? <span className="schedule-status next">In Progress</span>
+                      : played
+                        ? <span className="schedule-status played">Played</span>
+                        : isNext
+                          ? <span className="schedule-status next">Next Up</span>
+                          : <span className="schedule-status upcoming">Upcoming</span>}
                   </td>
                 </tr>
               )

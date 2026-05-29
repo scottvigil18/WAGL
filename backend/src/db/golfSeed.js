@@ -43,7 +43,7 @@ function seedCourses() {
       // Davis County
       { name: 'Bountiful Ridge Golf Club',        county: 'Davis', course_rating: 71.3, slope_rating: 127, holes: 18, par_front: 36, par_back: 36 },
       { name: 'Crane Field Golf Course',          county: 'Davis', course_rating: 70.1, slope_rating: 122, holes: 18, par_front: 36, par_back: 35 },
-      { name: 'Davis Park Golf Course',           county: 'Davis', course_rating: 69.5, slope_rating: 119, holes: 18, par_front: 35, par_back: 36 },
+      { name: 'Davis Park Golf Course',           county: 'Davis', course_rating: 69.5, slope_rating: 119, holes: 18, par_front: 36, par_back: 36 },
       { name: 'Eaglewood Golf Course',            county: 'Davis', course_rating: 70.8, slope_rating: 125, holes: 18, par_front: 36, par_back: 36 },
       { name: 'Glen Eagle Golf Club',             county: 'Davis', course_rating: 71.0, slope_rating: 124, holes: 18, par_front: 36, par_back: 36 },
       { name: 'Hubbard Memorial Golf Course',     county: 'Davis', course_rating: 69.0, slope_rating: 118, holes: 18, par_front: 36, par_back: 36 },
@@ -74,7 +74,7 @@ function seedCourses() {
       'Remuda Golf Course':               { par_front: 36, par_back: 36 },
       'Bountiful Ridge Golf Club':        { par_front: 36, par_back: 36 },
       'Crane Field Golf Course':          { par_front: 36, par_back: 35 },
-      'Davis Park Golf Course':           { par_front: 35, par_back: 36 },
+      'Davis Park Golf Course':           { par_front: 36, par_back: 36 },
       'Eaglewood Golf Course':            { par_front: 36, par_back: 36 },
       'Glen Eagle Golf Club':             { par_front: 36, par_back: 36 },
       'Hubbard Memorial Golf Course':     { par_front: 36, par_back: 36 },

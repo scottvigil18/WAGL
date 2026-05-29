@@ -79,7 +79,7 @@ router.get('/players', (req, res) => {
       LEFT JOIN handicaps h ON p.id = h.player_id
       LEFT JOIN scores s ON p.id = s.player_id
       GROUP BY p.id
-      ORDER BY p.pending_approval DESC, p.archived ASC, p.username ASC
+      ORDER BY p.pending_approval DESC, p.archived ASC, p.last_name ASC, p.first_name ASC
     `).all();
     return res.json(players);
   } catch (err) {

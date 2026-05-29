@@ -4,13 +4,13 @@ import {
   adminArchivePlayer, adminUnarchivePlayer, adminForcePasswordReset,
   adminApproveRegistration, adminDenyRegistration, adminGetMaxPlayers, adminSetMaxPlayers,
   adminGetScores, adminAddScore, adminUpdateScore, adminDeleteScore,
-  adminImportCsv, adminGetMessages, adminMarkMessageRead, adminDeleteMessage,
+  adminGetMessages, adminMarkMessageRead, adminDeleteMessage,
   adminBroadcast, adminGetUnreadCount, getContestWinners, adminSaveContestWinner, getCourses,
 } from '../api/golfApi'
 import { formatPhoneInput, formatPhoneDisplay } from '../utils/formatPhone'
 import { WAGL_SCHEDULE, formatEventDate } from '../utils/waglSchedule'
 
-const TABS = ['Players', 'Scores', 'Contest Winners', 'Messages', 'Handicap', 'CSV Import']
+const TABS = ['Players', 'Scores', 'Contest Winners', 'Messages', 'Handicap']
 
 export default function GolfAdminPage() {
   const [activeTab, setActiveTab] = useState('Players')
@@ -41,7 +41,6 @@ export default function GolfAdminPage() {
         {activeTab === 'Contest Winners' && <ContestWinnersTab />}
         {activeTab === 'Messages'        && <MessagesTab />}
         {activeTab === 'Handicap'        && <HandicapTab />}
-        {activeTab === 'CSV Import'      && <CsvImportTab />}
       </div>
     </div>
   )
@@ -353,6 +352,8 @@ function PlayersTab() {
   const [showArchived, setShowArchived] = useState(false)
   const [maxPlayers, setMaxPlayers] = useState(50)
   const [currentCount, setCurrentCount] = useState(0)
+  const [selectedActive, setSelectedActive] = useState(new Set())
+  const [selectedArchived, setSelectedArchived] = useState(new Set())
 
   useEffect(() => { load() }, [])
   useEffect(() => {
@@ -370,6 +371,75 @@ function PlayersTab() {
     const newVal = Math.max(0, Math.min(100, maxPlayers + delta))
     setMaxPlayers(newVal)
     try { await adminSetMaxPlayers(newVal) } catch (e) { setMsg(e.message) }
+  }
+
+  async function bulkArchive() {
+    if (selectedActive.size === 0) return
+    if (!confirm(`Archive ${selectedActive.size} selected player(s)?`)) return
+    for (const id of selectedActive) {
+      try { await adminArchivePlayer(id) } catch (e) { /* continue */ }
+    }
+    setPlayers(prev => prev.map(p => selectedActive.has(p.id) ? { ...p, archived: 1 } : p))
+    setSelectedActive(new Set())
+    setMsg(`${selectedActive.size} player(s) archived.`)
+  }
+
+  async function bulkActivate() {
+    if (selectedArchived.size === 0) return
+    if (!confirm(`Restore ${selectedArchived.size} selected player(s)?`)) return
+    for (const id of selectedArchived) {
+      try { await adminUnarchivePlayer(id) } catch (e) { /* continue */ }
+    }
+    setPlayers(prev => prev.map(p => selectedArchived.has(p.id) ? { ...p, archived: 0 } : p))
+    setSelectedArchived(new Set())
+    setMsg(`${selectedArchived.size} player(s) restored.`)
+  }
+
+  function toggleActiveSelect(id) {
+    setSelectedActive(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id); else next.add(id)
+      return next
+    })
+  }
+
+  function toggleArchivedSelect(id) {
+    setSelectedArchived(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id); else next.add(id)
+      return next
+    })
+  }
+
+  function selectAllActive() {
+    if (selectedActive.size === activePlayers.length) setSelectedActive(new Set())
+    else setSelectedActive(new Set(activePlayers.map(p => p.id)))
+  }
+
+  function selectAllArchived() {
+    if (selectedArchived.size === archivedPlayers.length) setSelectedArchived(new Set())
+    else setSelectedArchived(new Set(archivedPlayers.map(p => p.id)))
+  }
+
+  function exportPlayersCsv() {
+    const rows = [['First Name', 'Last Name', 'Username', 'Email', 'Phone', 'Handicap', 'Scores', 'Role', 'Joined']]
+    for (const p of activePlayers) {
+      rows.push([
+        p.first_name || '', p.last_name || '', p.username,
+        p.email || '', p.phone || '',
+        p.handicap_index != null ? p.handicap_index : '',
+        p.score_count || 0, p.role,
+        p.created_at ? p.created_at.slice(0, 10) : ''
+      ])
+    }
+    const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n')
+    const blob = new Blob([csv], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `wagl-players-${new Date().toISOString().slice(0, 10)}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
   }
 
   function startEdit(p) {
@@ -456,14 +526,17 @@ function PlayersTab() {
   if (error) return <p className="golf-error">{error}</p>
 
   const pendingPlayers = players.filter(p => p.pending_approval === 1)
-  const activePlayers = players.filter(p => !p.archived && !p.pending_approval)
-  const archivedPlayers = players.filter(p => p.archived)
+  const activePlayers = players.filter(p => !p.archived && !p.pending_approval && p.role !== 'admin')
+  const archivedPlayers = players.filter(p => p.archived && p.role !== 'admin')
 
   return (
     <div>
       <div className="admin-section-header">
         <h3>Player Management</h3>
         <span className="admin-count">{activePlayers.length} active, {archivedPlayers.length} archived{pendingPlayers.length > 0 ? `, ${pendingPlayers.length} pending` : ''}</span>
+        <div className="tee-actions">
+          <button className="btn btn-small btn-secondary" onClick={exportPlayersCsv}>📥 Export CSV</button>
+        </div>
         <div className="start-time-adjuster" style={{ marginLeft: 'auto' }}>
           <span className="weekly-label">Max Players:</span>
           <button className="btn btn-small btn-secondary" onClick={() => adjustMaxPlayers(-1)}>▼</button>
@@ -501,10 +574,18 @@ function PlayersTab() {
         </div>
       )}
 
+      {selectedActive.size > 0 && (
+        <div style={{ marginBottom: 10, display: 'flex', gap: 8, alignItems: 'center' }}>
+          <span style={{ fontSize: '0.85rem' }}>{selectedActive.size} selected</span>
+          <button className="btn btn-small btn-danger" onClick={bulkArchive}>Archive Selected</button>
+        </div>
+      )}
+
       <div className="golf-table-wrap">
         <table className="golf-table">
           <thead>
             <tr>
+              <th style={{width: 30}}><input type="checkbox" checked={selectedActive.size === activePlayers.length && activePlayers.length > 0} onChange={selectAllActive} /></th>
               <th>Name</th>
               <th>Username</th>
               <th>Email</th>
@@ -517,7 +598,7 @@ function PlayersTab() {
           </thead>
           <tbody>
             {activePlayers.length === 0 && (
-              <tr><td colSpan={8} className="golf-empty">No active players.</td></tr>
+              <tr><td colSpan={9} className="golf-empty">No active players.</td></tr>
             )}
             {activePlayers.map(p => (
               <tr key={p.id}>
@@ -557,6 +638,7 @@ function PlayersTab() {
                   </>
                 ) : (
                   <>
+                    <td><input type="checkbox" checked={selectedActive.has(p.id)} onChange={() => toggleActiveSelect(p.id)} /></td>
                     <td><strong>{p.first_name || ''} {p.last_name || ''}</strong></td>
                     <td>{p.username}</td>
                     <td>{p.email || '—'}</td>
@@ -568,6 +650,7 @@ function PlayersTab() {
                       <button className="btn btn-small btn-secondary" onClick={() => startEdit(p)}>Edit</button>
                       <button className="btn btn-small btn-secondary" onClick={() => forceReset(p.id, p.username)} title="Force password reset">🔒</button>
                       <button className="btn btn-small btn-danger" onClick={() => archivePlayer(p.id, p.username)}>Archive</button>
+                      <button className="btn btn-small btn-danger" onClick={() => deletePlayer(p.id, p.username)} title="Permanently delete">🗑️</button>
                     </td>
                   </>
                 )}
@@ -586,10 +669,18 @@ function PlayersTab() {
             {showArchived ? 'Hide' : 'Show'} Archived Players ({archivedPlayers.length})
           </button>
           {showArchived && (
+            <>
+            {selectedArchived.size > 0 && (
+              <div style={{ marginTop: 10, marginBottom: 6, display: 'flex', gap: 8, alignItems: 'center' }}>
+                <span style={{ fontSize: '0.85rem' }}>{selectedArchived.size} selected</span>
+                <button className="btn btn-small btn-primary" onClick={bulkActivate}>Restore Selected</button>
+              </div>
+            )}
             <div className="golf-table-wrap" style={{ marginTop: 12 }}>
               <table className="golf-table">
                 <thead>
                   <tr>
+                    <th style={{width: 30}}><input type="checkbox" checked={selectedArchived.size === archivedPlayers.length && archivedPlayers.length > 0} onChange={selectAllArchived} /></th>
                     <th>Name</th>
                     <th>Username</th>
                     <th>Email</th>
@@ -600,6 +691,7 @@ function PlayersTab() {
                 <tbody>
                   {archivedPlayers.map(p => (
                     <tr key={p.id} className="schedule-row-upcoming">
+                      <td><input type="checkbox" checked={selectedArchived.has(p.id)} onChange={() => toggleArchivedSelect(p.id)} /></td>
                       <td>{p.first_name || ''} {p.last_name || ''}</td>
                       <td>{p.username}</td>
                       <td>{p.email || '—'}</td>
@@ -613,6 +705,7 @@ function PlayersTab() {
                 </tbody>
               </table>
             </div>
+            </>
           )}
         </div>
       )}
@@ -1037,72 +1130,4 @@ function MessagesTab() {
   )
 }
 
-// ─── CSV Import Tab ───────────────────────────────────────────────────────────
 
-function CsvImportTab() {
-  const [file, setFile] = useState(null)
-  const [loading, setLoading] = useState(false)
-  const [result, setResult] = useState(null)
-  const [error, setError] = useState('')
-  const fileRef = useRef()
-
-  async function handleImport(e) {
-    e.preventDefault()
-    if (!file) { setError('Please select a CSV file.'); return }
-    setLoading(true)
-    setError('')
-    setResult(null)
-    try {
-      const res = await adminImportCsv(file)
-      setResult(res)
-      setFile(null)
-      if (fileRef.current) fileRef.current.value = ''
-    } catch (e) { setError(e.message) }
-    finally { setLoading(false) }
-  }
-
-  return (
-    <div className="csv-import-section">
-      <div className="admin-section-header">
-        <h3>Import Historical Scores via CSV</h3>
-      </div>
-      <div className="csv-format-info">
-        <p><strong>Required CSV columns:</strong> <code>username</code>, <code>score</code>, <code>date_played</code></p>
-        <p><strong>Optional columns:</strong> <code>holes</code> (9 or 18, defaults to 18), <code>course_id</code></p>
-        <p><strong>Date format:</strong> YYYY-MM-DD &nbsp;|&nbsp; <strong>Max file size:</strong> 5 MB</p>
-        <details className="csv-example">
-          <summary>View example CSV</summary>
-          <pre>{`username,score,date_played,holes,course_id\nScottV,82,2024-06-15,18,1\nScottV,79,2024-07-01,18,2\nJohnDoe,88,2024-06-20,18`}</pre>
-        </details>
-      </div>
-      <form onSubmit={handleImport} className="csv-upload-form">
-        <input
-          ref={fileRef}
-          type="file"
-          accept=".csv,text/csv"
-          onChange={e => setFile(e.target.files[0] || null)}
-          className="csv-file-input"
-        />
-        {error && <p className="golf-error">{error}</p>}
-        <button type="submit" className="btn btn-primary" disabled={loading || !file}>
-          {loading ? 'Importing…' : 'Import CSV'}
-        </button>
-      </form>
-      {result && (
-        <div className="csv-result">
-          <p className="golf-success">
-            ✅ Import complete — <strong>{result.imported}</strong> rows imported, <strong>{result.skipped}</strong> skipped.
-          </p>
-          {result.errors.length > 0 && (
-            <details className="csv-errors">
-              <summary>{result.errors.length} row error{result.errors.length !== 1 ? 's' : ''}</summary>
-              <ul>
-                {result.errors.map((e, i) => <li key={i}>{e}</li>)}
-              </ul>
-            </details>
-          )}
-        </div>
-      )}
-    </div>
-  )
-}
