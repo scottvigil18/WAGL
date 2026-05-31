@@ -641,7 +641,7 @@ router.post('/contest-winners', (req, res) => {
     if (!event_date || !/^\d{4}-\d{2}-\d{2}$/.test(event_date)) {
       return res.status(400).json({ error: 'event_date must be YYYY-MM-DD' });
     }
-    if (!['mens_closest', 'womens_closest', 'longest_putt', 'handicap_winner'].includes(category)) {
+    if (!['mens_closest', 'womens_closest', 'longest_putt', 'handicap_low', 'handicap_mid', 'handicap_high'].includes(category)) {
       return res.status(400).json({ error: 'Invalid category' });
     }
     if (!player_name || typeof player_name !== 'string' || !player_name.trim()) {
@@ -669,6 +669,62 @@ router.post('/contest-winners', (req, res) => {
 });
 
 // ─── RSVPs ────────────────────────────────────────────────────────────────────
+
+/**
+ * POST /api/golf/admin/tee-assignments
+ * Save tee time assignments for an event.
+ * Body: { event_date, slots: [[player_id|null, ...], ...] }
+ */
+router.post('/tee-assignments', (req, res) => {
+  try {
+    const { event_date, slots } = req.body;
+    if (!event_date || !Array.isArray(slots)) {
+      return res.status(400).json({ error: 'event_date and slots array required' });
+    }
+
+    // Clear existing assignments for this date
+    golfDb.prepare('DELETE FROM tee_assignments WHERE event_date = ?').run(event_date);
+
+    // Insert new assignments
+    const insert = golfDb.prepare(
+      'INSERT INTO tee_assignments (event_date, slot_index, position, player_id) VALUES (?, ?, ?, ?)'
+    );
+    const saveAll = golfDb.transaction(() => {
+      for (let i = 0; i < slots.length; i++) {
+        for (let j = 0; j < slots[i].length; j++) {
+          const playerId = slots[i][j];
+          if (playerId) {
+            insert.run(event_date, i, j, playerId);
+          }
+        }
+      }
+    });
+    saveAll();
+
+    return res.json({ message: 'Tee assignments saved' });
+  } catch (err) {
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * GET /api/golf/admin/tee-assignments?event_date=YYYY-MM-DD
+ * Load saved tee time assignments for an event.
+ */
+router.get('/tee-assignments', (req, res) => {
+  try {
+    const { event_date } = req.query;
+    if (!event_date) return res.status(400).json({ error: 'event_date required' });
+
+    const rows = golfDb.prepare(
+      'SELECT slot_index, position, player_id FROM tee_assignments WHERE event_date = ? ORDER BY slot_index, position'
+    ).all(event_date);
+
+    return res.json(rows);
+  } catch (err) {
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
 
 /**
  * GET /api/golf/admin/rsvps

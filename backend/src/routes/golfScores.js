@@ -464,14 +464,69 @@ router.get('/contest-winners', (req, res) => {
     const { event_date } = req.query;
     let rows;
     if (event_date) {
-      rows = golfDb.prepare(
-        'SELECT * FROM contest_winners WHERE event_date = ? ORDER BY category'
-      ).all(event_date);
+      rows = golfDb.prepare(`
+        SELECT cw.*, h.handicap_index,
+               s.score AS player_score
+        FROM contest_winners cw
+        LEFT JOIN handicaps h ON cw.player_id = h.player_id
+        LEFT JOIN scores s ON cw.player_id = s.player_id
+          AND s.date_played BETWEEN date(cw.event_date, '-2 days') AND date(cw.event_date, '+2 days')
+        WHERE cw.event_date = ?
+        ORDER BY cw.category
+      `).all(event_date);
     } else {
-      rows = golfDb.prepare(
-        'SELECT * FROM contest_winners ORDER BY event_date DESC, category'
-      ).all();
+      rows = golfDb.prepare(`
+        SELECT cw.*, h.handicap_index,
+               s.score AS player_score
+        FROM contest_winners cw
+        LEFT JOIN handicaps h ON cw.player_id = h.player_id
+        LEFT JOIN scores s ON cw.player_id = s.player_id
+          AND s.date_played BETWEEN date(cw.event_date, '-2 days') AND date(cw.event_date, '+2 days')
+        ORDER BY cw.event_date DESC, cw.category
+      `).all();
     }
+    return res.json(rows);
+  } catch (err) {
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * GET /api/golf/tee-assignments?event_date=YYYY-MM-DD
+ * Public (auth required): load saved tee time assignments for an event.
+ */
+router.get('/tee-assignments', authMiddleware, (req, res) => {
+  try {
+    const { event_date } = req.query;
+    if (!event_date) return res.status(400).json({ error: 'event_date required' });
+
+    const rows = golfDb.prepare(
+      'SELECT slot_index, position, player_id FROM tee_assignments WHERE event_date = ? ORDER BY slot_index, position'
+    ).all(event_date);
+
+    return res.json(rows);
+  } catch (err) {
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * GET /api/golf/rsvps/event?event_date=YYYY-MM-DD
+ * Public (auth required): list all RSVPs for an event date.
+ */
+router.get('/rsvps/event', authMiddleware, (req, res) => {
+  try {
+    const { event_date } = req.query;
+    if (!event_date) return res.status(400).json({ error: 'event_date required' });
+
+    const rows = golfDb.prepare(`
+      SELECT r.id, r.player_id, p.username, p.first_name, p.last_name,
+             r.event_date, r.course_name, r.response, r.created_at
+      FROM rsvps r
+      JOIN players p ON r.player_id = p.id
+      WHERE r.event_date = ?
+      ORDER BY r.response ASC, p.last_name ASC
+    `).all(event_date);
     return res.json(rows);
   } catch (err) {
     return res.status(500).json({ error: 'Internal server error' });

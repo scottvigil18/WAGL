@@ -269,6 +269,24 @@ export async function getMyRsvp(eventDate) {
   return data
 }
 
+export async function getEventRsvps(eventDate) {
+  const res = await fetch(`/api/golf/rsvps/event?event_date=${encodeURIComponent(eventDate)}`, {
+    headers: authHeaders(),
+  })
+  const data = await res.json()
+  if (!res.ok) throw new Error(data.error || 'Failed to fetch RSVPs')
+  return data
+}
+
+export async function getTeeAssignments(eventDate) {
+  const res = await fetch(`/api/golf/tee-assignments?event_date=${encodeURIComponent(eventDate)}`, {
+    headers: authHeaders(),
+  })
+  const data = await res.json()
+  if (!res.ok) throw new Error(data.error || 'Failed to load tee assignments')
+  return data
+}
+
 export async function editScore(id, score, datePlayed, holes) {
   const body = { score, date_played: datePlayed }
   if (holes !== undefined) body.holes = holes
@@ -447,6 +465,26 @@ export async function adminGetRsvps(eventDate) {
   const res = await fetch(url, { headers: authHeaders() })
   const data = await res.json()
   if (!res.ok) throw new Error(data.error || 'Failed to fetch RSVPs')
+  return data
+}
+
+export async function adminSaveTeeAssignments(eventDate, slots) {
+  const res = await fetch('/api/golf/admin/tee-assignments', {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ event_date: eventDate, slots }),
+  })
+  const data = await res.json()
+  if (!res.ok) throw new Error(data.error || 'Failed to save tee assignments')
+  return data
+}
+
+export async function adminGetTeeAssignments(eventDate) {
+  const res = await fetch(`/api/golf/admin/tee-assignments?event_date=${encodeURIComponent(eventDate)}`, {
+    headers: authHeaders(),
+  })
+  const data = await res.json()
+  if (!res.ok) throw new Error(data.error || 'Failed to load tee assignments')
   return data
 }
 

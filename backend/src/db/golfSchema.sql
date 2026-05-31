@@ -106,7 +106,7 @@ CREATE INDEX IF NOT EXISTS idx_notifications_player ON notifications(player_id, 
 CREATE TABLE IF NOT EXISTS contest_winners (
   id              INTEGER PRIMARY KEY AUTOINCREMENT,
   event_date      TEXT    NOT NULL,
-  category        TEXT    NOT NULL CHECK(category IN ('mens_closest', 'womens_closest', 'longest_putt', 'handicap_winner')),
+  category        TEXT    NOT NULL CHECK(category IN ('mens_closest', 'womens_closest', 'longest_putt', 'handicap_low', 'handicap_mid', 'handicap_high')),
   player_id       INTEGER REFERENCES players(id) ON DELETE SET NULL,
   player_name     TEXT    NOT NULL DEFAULT '',
   distance        TEXT    DEFAULT '',
@@ -123,3 +123,14 @@ CREATE TABLE IF NOT EXISTS league_settings (
 );
 
 INSERT OR IGNORE INTO league_settings (key, value) VALUES ('max_players', '50');
+
+-- Tee Time Assignments table
+CREATE TABLE IF NOT EXISTS tee_assignments (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  event_date  TEXT    NOT NULL,
+  slot_index  INTEGER NOT NULL,
+  position    INTEGER NOT NULL,
+  player_id   INTEGER REFERENCES players(id) ON DELETE SET NULL,
+  created_at  TEXT    NOT NULL DEFAULT (datetime('now')),
+  UNIQUE(event_date, slot_index, position)
+);

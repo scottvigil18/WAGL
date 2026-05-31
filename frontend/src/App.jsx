@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { getUser, clearToken } from './api/golfApi'
 
 // Golf imports
@@ -49,6 +49,32 @@ export default function App() {
 
   // Golf user state
   const [golfUser, setGolfUser] = useState(() => getUser())
+
+  // Idle timeout — logout after 15 minutes of inactivity
+  const idleTimer = useRef(null)
+  const IDLE_TIMEOUT = 15 * 60 * 1000 // 15 minutes
+
+  useEffect(() => {
+    if (!golfUser) return
+
+    function resetTimer() {
+      if (idleTimer.current) clearTimeout(idleTimer.current)
+      idleTimer.current = setTimeout(() => {
+        clearToken()
+        setGolfUser(null)
+        window.location.hash = '#/golf/splash'
+      }, IDLE_TIMEOUT)
+    }
+
+    const events = ['mousedown', 'mousemove', 'keydown', 'scroll', 'touchstart', 'click']
+    events.forEach(e => window.addEventListener(e, resetTimer))
+    resetTimer()
+
+    return () => {
+      events.forEach(e => window.removeEventListener(e, resetTimer))
+      if (idleTimer.current) clearTimeout(idleTimer.current)
+    }
+  }, [golfUser])
 
   function handleGolfLogin(user) {
     setGolfUser(user)

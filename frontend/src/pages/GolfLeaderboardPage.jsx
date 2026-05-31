@@ -287,14 +287,17 @@ function ContestWinners() {
 
   // Filter winners by contest type
   const closestCategories = ['mens_closest', 'womens_closest', 'longest_putt']
+  const handicapCategories = ['handicap_low', 'handicap_mid', 'handicap_high']
   const closestWinners = winners.filter(w => closestCategories.includes(w.category))
-  const handicapWinners = winners.filter(w => w.category === 'handicap_winner')
+  const handicapWinners = winners.filter(w => handicapCategories.includes(w.category))
 
   const categoryLabels = {
     mens_closest: "🎯 Men's Closest to the Hole",
     womens_closest: "🎯 Women's Closest to the Hole",
     longest_putt: "🏌️ Longest Putt",
-    handicap_winner: "🏆 Handicap Winner",
+    handicap_low: "🏆 Low Flight Winner",
+    handicap_mid: "🏆 Mid Flight Winner",
+    handicap_high: "🏆 High Flight Winner",
   }
 
   function renderWinnersList(filtered) {
@@ -306,6 +309,9 @@ function ContestWinners() {
 
     if (filtered.length === 0) return <p className="golf-empty">No winners recorded yet.</p>
 
+    const isHandicapView = filtered.some(w => w.category?.startsWith('handicap_'))
+    const PAR = 36
+
     return (
       <div className="contest-winners-list">
         {Object.entries(grouped).sort((a, b) => b[0].localeCompare(a[0])).map(([date, entries]) => {
@@ -315,15 +321,49 @@ function ContestWinners() {
               <h4 className="contest-week-title">
                 {event ? `Event ${event.event}: ${event.course}` : date} — {formatEventDate(date)}
               </h4>
-              <div className="contest-entries">
-                {entries.map(w => (
-                  <div key={w.id} className="contest-entry">
-                    <span className="contest-category">{categoryLabels[w.category] || w.category}</span>
-                    <span className="contest-winner-name">{w.player_name}</span>
-                    {w.distance && <span className="contest-distance">{w.distance}</span>}
-                  </div>
-                ))}
-              </div>
+              {isHandicapView ? (
+                <div className="golf-table-wrap">
+                  <table className="golf-table" style={{ tableLayout: 'auto' }}>
+                    <thead>
+                      <tr>
+                        <th>Flight</th>
+                        <th>Winner</th>
+                        <th>Par</th>
+                        <th>Gross Score</th>
+                        <th>Handicap</th>
+                        <th>Net Score</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {entries.map(w => {
+                        const gross = w.player_score || null
+                        const hc = w.handicap_index != null ? Math.round(w.handicap_index) : null
+                        const net = gross != null && hc != null ? gross - hc : null
+                        return (
+                          <tr key={w.id}>
+                            <td>{categoryLabels[w.category] || w.category}</td>
+                            <td><strong>{w.player_name}</strong></td>
+                            <td>{PAR}</td>
+                            <td>{gross ?? '—'}</td>
+                            <td>{hc ?? '—'}</td>
+                            <td><strong>{net ?? '—'}</strong></td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="contest-entries">
+                  {entries.map(w => (
+                    <div key={w.id} className="contest-entry">
+                      <span className="contest-category">{categoryLabels[w.category] || w.category}</span>
+                      <span className="contest-winner-name">{w.player_name}</span>
+                      {w.distance && <span className="contest-distance">{w.distance}</span>}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )
         })}

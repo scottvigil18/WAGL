@@ -726,6 +726,9 @@ function ContestWinnersTab() {
   const [womensDistance, setWomensDistance] = useState('')
   const [puttDistance, setPuttDistance] = useState('')
   const [handicapWinner, setHandicapWinner] = useState('')
+  const [handicapLow, setHandicapLow] = useState('')
+  const [handicapMid, setHandicapMid] = useState('')
+  const [handicapHigh, setHandicapHigh] = useState('')
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState('')
   const [existingWinners, setExistingWinners] = useState([])
@@ -748,11 +751,15 @@ function ContestWinnersTab() {
       const mc = winners.find(w => w.category === 'mens_closest')
       const wc = winners.find(w => w.category === 'womens_closest')
       const lp = winners.find(w => w.category === 'longest_putt')
-      const hw = winners.find(w => w.category === 'handicap_winner')
+      const hl = winners.find(w => w.category === 'handicap_low')
+      const hm = winners.find(w => w.category === 'handicap_mid')
+      const hh = winners.find(w => w.category === 'handicap_high')
       setMensClosest(mc?.player_id ? String(mc.player_id) : '')
       setWomensClosest(wc?.player_id ? String(wc.player_id) : '')
       setLongestPutt(lp?.player_id ? String(lp.player_id) : '')
-      setHandicapWinner(hw?.player_id ? String(hw.player_id) : '')
+      setHandicapLow(hl?.player_id ? String(hl.player_id) : '')
+      setHandicapMid(hm?.player_id ? String(hm.player_id) : '')
+      setHandicapHigh(hh?.player_id ? String(hh.player_id) : '')
       setMensDistance(mc?.distance || '')
       setWomensDistance(wc?.distance || '')
       setPuttDistance(lp?.distance || '')
@@ -774,7 +781,9 @@ function ContestWinnersTab() {
         if (womensClosest) await adminSaveContestWinner(selectedDate, 'womens_closest', getPlayerName(womensClosest), parseInt(womensClosest, 10), womensDistance)
         if (longestPutt) await adminSaveContestWinner(selectedDate, 'longest_putt', getPlayerName(longestPutt), parseInt(longestPutt, 10), puttDistance)
       } else {
-        if (handicapWinner) await adminSaveContestWinner(selectedDate, 'handicap_winner', getPlayerName(handicapWinner), parseInt(handicapWinner, 10), '')
+        if (handicapLow) await adminSaveContestWinner(selectedDate, 'handicap_low', getPlayerName(handicapLow), parseInt(handicapLow, 10), '')
+        if (handicapMid) await adminSaveContestWinner(selectedDate, 'handicap_mid', getPlayerName(handicapMid), parseInt(handicapMid, 10), '')
+        if (handicapHigh) await adminSaveContestWinner(selectedDate, 'handicap_high', getPlayerName(handicapHigh), parseInt(handicapHigh, 10), '')
       }
       setMsg('Contest winners saved!')
     } catch (e) { setMsg(e.message) }
@@ -848,13 +857,29 @@ function ContestWinnersTab() {
             </div>
           </>
         ) : (
-          <div className="contest-form-row">
-            <label>🏆 Handicap Winner</label>
-            <select value={handicapWinner} onChange={e => setHandicapWinner(e.target.value)} className="admin-inline-input">
-              <option value="">— Select player —</option>
-              {players.map(p => <option key={p.id} value={p.id}>{p.first_name || p.username} {p.last_name || ''}</option>)}
-            </select>
-          </div>
+          <>
+            <div className="contest-form-row">
+              <label>🏆 Low Flight Winner</label>
+              <select value={handicapLow} onChange={e => setHandicapLow(e.target.value)} className="admin-inline-input">
+                <option value="">— Select player —</option>
+                {players.map(p => <option key={p.id} value={p.id}>{p.first_name || p.username} {p.last_name || ''}</option>)}
+              </select>
+            </div>
+            <div className="contest-form-row">
+              <label>🏆 Mid Flight Winner</label>
+              <select value={handicapMid} onChange={e => setHandicapMid(e.target.value)} className="admin-inline-input">
+                <option value="">— Select player —</option>
+                {players.map(p => <option key={p.id} value={p.id}>{p.first_name || p.username} {p.last_name || ''}</option>)}
+              </select>
+            </div>
+            <div className="contest-form-row">
+              <label>🏆 High Flight Winner</label>
+              <select value={handicapHigh} onChange={e => setHandicapHigh(e.target.value)} className="admin-inline-input">
+                <option value="">— Select player —</option>
+                {players.map(p => <option key={p.id} value={p.id}>{p.first_name || p.username} {p.last_name || ''}</option>)}
+              </select>
+            </div>
+          </>
         )}
 
         {msg && <p className={msg.includes('saved') ? 'golf-success' : 'golf-error'}>{msg}</p>}

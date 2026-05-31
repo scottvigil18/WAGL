@@ -1,34 +1,30 @@
-import { useState, useEffect } from 'react'
-import { WAGL_SCHEDULE, isEventPlayed, formatEventDate } from '../utils/waglSchedule'
-import { adminGetRsvps, getUser } from '../api/golfApi'
-
-const TABS_ADMIN = ['Schedule', 'RSVPs']
-const TABS_PLAYER = ['Schedule']
+import { useState, useEffect, useRef } from 'react'
+import { WAGL_SCHEDULE, isEventPlayed, formatEventDate, getFollowingWeekEvent } from '../utils/waglSchedule'
+import { adminGetRsvps, getEventRsvps, adminSaveTeeAssignments, adminGetTeeAssignments, getTeeAssignments, getUser } from '../api/golfApi'
 
 export default function GolfSchedulePage() {
   const user = getUser()
   const isAdmin = user?.role === 'admin'
-  const tabs = isAdmin ? TABS_ADMIN : TABS_PLAYER
+  const tabs = isAdmin ? ['Schedule', 'This Week', 'RSVPs'] : ['Schedule', 'This Week']
   const [activeTab, setActiveTab] = useState('Schedule')
 
   return (
     <div className="golf-page golf-page-wide">
       <h2>📅 Season Schedule</h2>
-      {isAdmin && (
-        <div className="leaderboard-tabs">
-          {tabs.map(tab => (
-            <button
-              key={tab}
-              className={`leaderboard-tab-btn${activeTab === tab ? ' active' : ''}`}
-              onClick={() => setActiveTab(tab)}
-            >
-              {tab}
-            </button>
-          ))}
-        </div>
-      )}
-      <div className={isAdmin ? 'leaderboard-tab-content' : ''}>
+      <div className="leaderboard-tabs">
+        {tabs.map(tab => (
+          <button
+            key={tab}
+            className={`leaderboard-tab-btn${activeTab === tab ? ' active' : ''}`}
+            onClick={() => setActiveTab(tab)}
+          >
+            {tab}
+          </button>
+        ))}
+      </div>
+      <div className="leaderboard-tab-content">
         {activeTab === 'Schedule' && <ScheduleTab />}
+        {activeTab === 'This Week' && <ThisWeekTab />}
         {activeTab === 'RSVPs' && isAdmin && <RsvpsTab />}
       </div>
     </div>
@@ -104,6 +100,145 @@ function ScheduleTab() {
   )
 }
 
+function ThisWeekTab() {
+  const [rsvps, setRsvps] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [teeSlots, setTeeSlots] = useState([])
+
+  const nextEvent = getFollowingWeekEvent()
+
+  useEffect(() => {
+    if (!nextEvent) { setLoading(false); return }
+    async function load() {
+      try {
+        const rsvpData = await getEventRsvps(nextEvent.date)
+        setRsvps(rsvpData)
+        const yesPlayers = rsvpData.filter(r => r.response === 'yes')
+
+        // Try to load saved tee assignments
+        let slots = null
+        try {
+          const saved = await getTeeAssignments(nextEvent.date)
+          if (saved.length > 0) {
+            const maxSlot = Math.max(...saved.map(s => s.slot_index))
+            const numSlots = Math.max(maxSlot + 1, Math.ceil(yesPlayers.length / 4), 1)
+            slots = Array.from({ length: numSlots }, () => [null, null, null, null])
+            for (const s of saved) {
+              const player = yesPlayers.find(p => p.player_id === s.player_id)
+              if (player && slots[s.slot_index]) {
+                slots[s.slot_index][s.position] = player
+              }
+            }
+            // Place unassigned players
+            const assignedIds = new Set(saved.map(s => s.player_id))
+            const unassigned = yesPlayers.filter(p => !assignedIds.has(p.player_id))
+            for (const p of unassigned) {
+              let placed = false
+              for (let i = 0; i < slots.length && !placed; i++) {
+                for (let j = 0; j < 4 && !placed; j++) {
+                  if (!slots[i][j]) { slots[i][j] = p; placed = true }
+                }
+              }
+              if (!placed) slots.push([p, null, null, null])
+            }
+          }
+        } catch (e) { /* no saved assignments */ }
+
+        if (!slots) {
+          // Default sequential
+          const numGroups = Math.max(Math.ceil(yesPlayers.length / 4), 1)
+          slots = Array.from({ length: numGroups }, (_, i) =>
+            [0, 1, 2, 3].map(j => yesPlayers[i * 4 + j] || null)
+          )
+        }
+        setTeeSlots(slots)
+      } catch (e) { setError(e.message) }
+      finally { setLoading(false) }
+    }
+    load()
+  }, [])
+
+  if (!nextEvent) return <p className="golf-empty">No upcoming events scheduled.</p>
+
+  const yesRsvps = rsvps.filter(r => r.response === 'yes')
+  const noRsvps = rsvps.filter(r => r.response === 'no')
+
+  function parseStartMinutes() {
+    const match = nextEvent.time.match(/(\d+):(\d+)\s*(PM|AM)?/i)
+    if (!match) return 16 * 60 + 10
+    let hours = parseInt(match[1], 10)
+    const mins = parseInt(match[2], 10)
+    if (match[3] && match[3].toUpperCase() === 'PM' && hours < 12) hours += 12
+    return hours * 60 + mins
+  }
+
+  function formatTime(totalMinutes) {
+    const h = Math.floor(totalMinutes / 60)
+    const m = totalMinutes % 60
+    const period = h >= 12 ? 'PM' : 'AM'
+    const h12 = h > 12 ? h - 12 : h === 0 ? 12 : h
+    return `${h12}:${m.toString().padStart(2, '0')} ${period}`
+  }
+
+  const startMinutes = parseStartMinutes()
+
+  return (
+    <div>
+      <div className="par-info-banner" style={{ marginBottom: 16 }}>
+        📅 <strong>{nextEvent.course}</strong> — {formatEventDate(nextEvent.date)} at {nextEvent.time}
+        <br />
+        <span style={{ fontSize: '0.85rem' }}>Contest: {nextEvent.contest}</span>
+      </div>
+
+      {loading ? (
+        <p className="golf-loading">Loading RSVPs…</p>
+      ) : error ? (
+        <p className="golf-error">{error}</p>
+      ) : yesRsvps.length === 0 ? (
+        <p className="golf-empty">No RSVPs yet for this week.</p>
+      ) : (
+        <>
+          <h3 style={{ color: '#166534', marginBottom: 12 }}>Tee Times ({yesRsvps.length} playing)</h3>
+          <div className="tee-time-grid">
+            {teeSlots.map((group, i) => {
+              const teeTime = formatTime(startMinutes + i * 9)
+              return (
+                <div key={i} className="tee-time-row">
+                  <div className="tee-time-label">{teeTime}</div>
+                  <div className="tee-time-slots">
+                    {[0, 1, 2, 3].map(pos => {
+                      const player = group[pos]
+                      return (
+                        <div key={pos} className={`tee-slot${player ? ' filled' : ' empty'}`}>
+                          {player
+                            ? <span className="tee-slot-name">{player.first_name || player.username} {player.last_name || ''}</span>
+                            : <span className="tee-slot-empty">Open</span>}
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+
+          {noRsvps.length > 0 && (
+            <div style={{ marginTop: 20 }}>
+              <h4>❌ Sitting Out ({noRsvps.length})</h4>
+              <ul className="rsvp-list">
+                {noRsvps.map(r => (
+                  <li key={r.id}>{r.first_name || r.username} {r.last_name || ''}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  )
+}
+
 function RsvpsTab() {
   const [selectedDate, setSelectedDate] = useState('')
   const [rsvps, setRsvps] = useState([])
@@ -111,8 +246,10 @@ function RsvpsTab() {
   const [error, setError] = useState('')
   const [teeSlots, setTeeSlots] = useState([])
   const [dragPlayer, setDragPlayer] = useState(null)
+  const dragRef = useRef(null)
   const [startOffset, setStartOffset] = useState(0) // minutes offset from scheduled time
   const [teeInterval, setTeeInterval] = useState(9) // minutes between tee times (7-12)
+  const [saveMsg, setSaveMsg] = useState('')
 
   const today = new Date()
   today.setHours(0, 0, 0, 0)
@@ -134,17 +271,54 @@ function RsvpsTab() {
         const data = await adminGetRsvps(selectedDate)
         setRsvps(data)
         const yesPlayers = data.filter(r => r.response === 'yes')
-        const numSlots = Math.max(Math.ceil(yesPlayers.length / 4) + 1, 2)
-        const slots = []
-        for (let i = 0; i < numSlots; i++) {
-          const group = []
-          for (let j = 0; j < 4; j++) {
-            const playerIdx = i * 4 + j
-            group.push(playerIdx < yesPlayers.length ? yesPlayers[playerIdx] : null)
+
+        // Try to load saved assignments
+        let savedSlots = null
+        try {
+          const saved = await adminGetTeeAssignments(selectedDate)
+          if (saved.length > 0) {
+            // Rebuild slots from saved data
+            const maxSlot = Math.max(...saved.map(s => s.slot_index))
+            const numSlots = Math.max(maxSlot + 1, Math.ceil(yesPlayers.length / 4) + 1, 2)
+            const slots = Array.from({ length: numSlots }, () => [null, null, null, null])
+            for (const s of saved) {
+              const player = yesPlayers.find(p => p.player_id === s.player_id)
+              if (player && slots[s.slot_index]) {
+                slots[s.slot_index][s.position] = player
+              }
+            }
+            // Place any unassigned players in empty slots
+            const assignedIds = new Set(saved.map(s => s.player_id))
+            const unassigned = yesPlayers.filter(p => !assignedIds.has(p.player_id))
+            for (const p of unassigned) {
+              let placed = false
+              for (let i = 0; i < slots.length && !placed; i++) {
+                for (let j = 0; j < 4 && !placed; j++) {
+                  if (!slots[i][j]) { slots[i][j] = p; placed = true }
+                }
+              }
+              if (!placed) slots.push([p, null, null, null])
+            }
+            savedSlots = slots
           }
-          slots.push(group)
+        } catch (e) { /* no saved assignments, use default */ }
+
+        if (savedSlots) {
+          setTeeSlots(savedSlots)
+        } else {
+          // Default: fill sequentially
+          const numSlots = Math.max(Math.ceil(yesPlayers.length / 4) + 1, 2)
+          const slots = []
+          for (let i = 0; i < numSlots; i++) {
+            const group = []
+            for (let j = 0; j < 4; j++) {
+              const playerIdx = i * 4 + j
+              group.push(playerIdx < yesPlayers.length ? yesPlayers[playerIdx] : null)
+            }
+            slots.push(group)
+          }
+          setTeeSlots(slots)
         }
-        setTeeSlots(slots)
       } catch (e) { setError(e.message) }
       finally { setLoading(false) }
     }
@@ -179,24 +353,28 @@ function RsvpsTab() {
   }
 
   function handleDragStart(player, fromSlotIdx, fromPos) {
+    dragRef.current = { player, fromSlotIdx, fromPos }
     setDragPlayer({ player, fromSlotIdx, fromPos })
   }
 
   function handleDrop(toSlotIdx, toPos) {
-    if (!dragPlayer) return
-    const { fromSlotIdx, fromPos } = dragPlayer
+    const drag = dragRef.current
+    if (!drag) return
+    const { fromSlotIdx, fromPos, player } = drag
     setTeeSlots(prev => {
       const next = prev.map(slot => [...slot])
       const targetPlayer = next[toSlotIdx][toPos]
-      next[toSlotIdx][toPos] = dragPlayer.player
+      next[toSlotIdx][toPos] = player
       next[fromSlotIdx][fromPos] = targetPlayer
       return next
     })
+    dragRef.current = null
     setDragPlayer(null)
   }
 
   function handleDragOver(e) {
     e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
   }
 
   function exportPdf() {
@@ -217,11 +395,23 @@ function RsvpsTab() {
     window.location.href = `mailto:?subject=${subject}&body=${body}`
   }
 
+  async function saveTeeAssignments() {
+    if (!selectedDate) return
+    setSaveMsg('')
+    try {
+      const slots = teeSlots.map(group => group.map(p => p ? p.player_id : null))
+      await adminSaveTeeAssignments(selectedDate, slots)
+      setSaveMsg('✅ Tee times saved!')
+      setTimeout(() => setSaveMsg(''), 3000)
+    } catch (e) { setSaveMsg(e.message) }
+  }
+
   return (
     <div>
       <div className="admin-section-header">
         <h3>Tee Times & RSVPs</h3>
         <div className="tee-actions">
+          <button className="btn btn-small btn-primary" onClick={saveTeeAssignments}>💾 Save Tee Times</button>
           <button className="btn btn-small btn-secondary" onClick={exportPdf} title="Export to PDF">📄 Export PDF</button>
           <button className="btn btn-small btn-secondary" onClick={emailTeeSheet} title="Email tee sheet">✉️ Email</button>
         </div>
@@ -302,6 +492,7 @@ function RsvpsTab() {
             <button className="btn btn-secondary btn-small" onClick={addTeeTime}>
               + Add Tee Time
             </button>
+            {saveMsg && <span style={{ marginLeft: 12, fontSize: '0.85rem', color: saveMsg.includes('✅') ? '#166534' : '#b91c1c' }}>{saveMsg}</span>}
           </div>
 
           {noRsvps.length > 0 && (
