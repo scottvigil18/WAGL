@@ -641,8 +641,8 @@ router.post('/contest-winners', (req, res) => {
     if (!event_date || !/^\d{4}-\d{2}-\d{2}$/.test(event_date)) {
       return res.status(400).json({ error: 'event_date must be YYYY-MM-DD' });
     }
-    if (!['mens_closest', 'womens_closest', 'longest_putt'].includes(category)) {
-      return res.status(400).json({ error: 'category must be mens_closest, womens_closest, or longest_putt' });
+    if (!['mens_closest', 'womens_closest', 'longest_putt', 'handicap_winner'].includes(category)) {
+      return res.status(400).json({ error: 'Invalid category' });
     }
     if (!player_name || typeof player_name !== 'string' || !player_name.trim()) {
       return res.status(400).json({ error: 'player_name is required' });

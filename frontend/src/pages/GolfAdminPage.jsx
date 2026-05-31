@@ -718,12 +718,14 @@ function PlayersTab() {
 function ContestWinnersTab() {
   const [players, setPlayers] = useState([])
   const [selectedDate, setSelectedDate] = useState('')
+  const [contestSubTab, setContestSubTab] = useState('closest')
   const [mensClosest, setMensClosest] = useState('')
   const [womensClosest, setWomensClosest] = useState('')
   const [longestPutt, setLongestPutt] = useState('')
   const [mensDistance, setMensDistance] = useState('')
   const [womensDistance, setWomensDistance] = useState('')
   const [puttDistance, setPuttDistance] = useState('')
+  const [handicapWinner, setHandicapWinner] = useState('')
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState('')
   const [existingWinners, setExistingWinners] = useState([])
@@ -746,9 +748,11 @@ function ContestWinnersTab() {
       const mc = winners.find(w => w.category === 'mens_closest')
       const wc = winners.find(w => w.category === 'womens_closest')
       const lp = winners.find(w => w.category === 'longest_putt')
+      const hw = winners.find(w => w.category === 'handicap_winner')
       setMensClosest(mc?.player_id ? String(mc.player_id) : '')
       setWomensClosest(wc?.player_id ? String(wc.player_id) : '')
       setLongestPutt(lp?.player_id ? String(lp.player_id) : '')
+      setHandicapWinner(hw?.player_id ? String(hw.player_id) : '')
       setMensDistance(mc?.distance || '')
       setWomensDistance(wc?.distance || '')
       setPuttDistance(lp?.distance || '')
@@ -765,14 +769,12 @@ function ContestWinnersTab() {
     setSaving(true)
     setMsg('')
     try {
-      if (mensClosest) {
-        await adminSaveContestWinner(selectedDate, 'mens_closest', getPlayerName(mensClosest), parseInt(mensClosest, 10), mensDistance)
-      }
-      if (womensClosest) {
-        await adminSaveContestWinner(selectedDate, 'womens_closest', getPlayerName(womensClosest), parseInt(womensClosest, 10), womensDistance)
-      }
-      if (longestPutt) {
-        await adminSaveContestWinner(selectedDate, 'longest_putt', getPlayerName(longestPutt), parseInt(longestPutt, 10), puttDistance)
+      if (contestSubTab === 'closest') {
+        if (mensClosest) await adminSaveContestWinner(selectedDate, 'mens_closest', getPlayerName(mensClosest), parseInt(mensClosest, 10), mensDistance)
+        if (womensClosest) await adminSaveContestWinner(selectedDate, 'womens_closest', getPlayerName(womensClosest), parseInt(womensClosest, 10), womensDistance)
+        if (longestPutt) await adminSaveContestWinner(selectedDate, 'longest_putt', getPlayerName(longestPutt), parseInt(longestPutt, 10), puttDistance)
+      } else {
+        if (handicapWinner) await adminSaveContestWinner(selectedDate, 'handicap_winner', getPlayerName(handicapWinner), parseInt(handicapWinner, 10), '')
       }
       setMsg('Contest winners saved!')
     } catch (e) { setMsg(e.message) }
@@ -808,33 +810,52 @@ function ContestWinnersTab() {
         </div>
       )}
 
+      <div className="leaderboard-tabs" style={{ marginBottom: 16 }}>
+        <button className={`leaderboard-tab-btn${contestSubTab === 'closest' ? ' active' : ''}`} onClick={() => setContestSubTab('closest')}>
+          Closest & Long Putt
+        </button>
+        <button className={`leaderboard-tab-btn${contestSubTab === 'handicap' ? ' active' : ''}`} onClick={() => setContestSubTab('handicap')}>
+          Handicap Winner
+        </button>
+      </div>
+
       <form onSubmit={handleSave} className="contest-form">
-        <div className="contest-form-row">
-          <label>🎯 Men's Closest to the Hole</label>
-          <select value={mensClosest} onChange={e => setMensClosest(e.target.value)} className="admin-inline-input">
-            <option value="">— Select player —</option>
-            {players.map(p => <option key={p.id} value={p.id}>{p.first_name || p.username} {p.last_name || ''}</option>)}
-          </select>
-          <input type="text" value={mensDistance} onChange={e => setMensDistance(e.target.value)} placeholder="Distance (e.g. 4'2&quot;)" className="admin-inline-input" style={{ maxWidth: 120 }} />
-        </div>
-
-        <div className="contest-form-row">
-          <label>🎯 Women's Closest to the Hole</label>
-          <select value={womensClosest} onChange={e => setWomensClosest(e.target.value)} className="admin-inline-input">
-            <option value="">— Select player —</option>
-            {players.map(p => <option key={p.id} value={p.id}>{p.first_name || p.username} {p.last_name || ''}</option>)}
-          </select>
-          <input type="text" value={womensDistance} onChange={e => setWomensDistance(e.target.value)} placeholder="Distance (e.g. 6'8&quot;)" className="admin-inline-input" style={{ maxWidth: 120 }} />
-        </div>
-
-        <div className="contest-form-row">
-          <label>🏌️ Longest Putt</label>
-          <select value={longestPutt} onChange={e => setLongestPutt(e.target.value)} className="admin-inline-input">
-            <option value="">— Select player —</option>
-            {players.map(p => <option key={p.id} value={p.id}>{p.first_name || p.username} {p.last_name || ''}</option>)}
-          </select>
-          <input type="text" value={puttDistance} onChange={e => setPuttDistance(e.target.value)} placeholder="Distance (e.g. 22')" className="admin-inline-input" style={{ maxWidth: 120 }} />
-        </div>
+        {contestSubTab === 'closest' ? (
+          <>
+            <div className="contest-form-row">
+              <label>🎯 Men's Closest to the Hole</label>
+              <select value={mensClosest} onChange={e => setMensClosest(e.target.value)} className="admin-inline-input">
+                <option value="">— Select player —</option>
+                {players.map(p => <option key={p.id} value={p.id}>{p.first_name || p.username} {p.last_name || ''}</option>)}
+              </select>
+              <input type="text" value={mensDistance} onChange={e => setMensDistance(e.target.value)} placeholder="Distance" className="admin-inline-input" style={{ maxWidth: 120 }} />
+            </div>
+            <div className="contest-form-row">
+              <label>🎯 Women's Closest to the Hole</label>
+              <select value={womensClosest} onChange={e => setWomensClosest(e.target.value)} className="admin-inline-input">
+                <option value="">— Select player —</option>
+                {players.map(p => <option key={p.id} value={p.id}>{p.first_name || p.username} {p.last_name || ''}</option>)}
+              </select>
+              <input type="text" value={womensDistance} onChange={e => setWomensDistance(e.target.value)} placeholder="Distance" className="admin-inline-input" style={{ maxWidth: 120 }} />
+            </div>
+            <div className="contest-form-row">
+              <label>🏌️ Longest Putt</label>
+              <select value={longestPutt} onChange={e => setLongestPutt(e.target.value)} className="admin-inline-input">
+                <option value="">— Select player —</option>
+                {players.map(p => <option key={p.id} value={p.id}>{p.first_name || p.username} {p.last_name || ''}</option>)}
+              </select>
+              <input type="text" value={puttDistance} onChange={e => setPuttDistance(e.target.value)} placeholder="Distance" className="admin-inline-input" style={{ maxWidth: 120 }} />
+            </div>
+          </>
+        ) : (
+          <div className="contest-form-row">
+            <label>🏆 Handicap Winner</label>
+            <select value={handicapWinner} onChange={e => setHandicapWinner(e.target.value)} className="admin-inline-input">
+              <option value="">— Select player —</option>
+              {players.map(p => <option key={p.id} value={p.id}>{p.first_name || p.username} {p.last_name || ''}</option>)}
+            </select>
+          </div>
+        )}
 
         {msg && <p className={msg.includes('saved') ? 'golf-success' : 'golf-error'}>{msg}</p>}
         <button type="submit" className="btn btn-primary" disabled={saving} style={{ marginTop: 12 }}>

@@ -106,7 +106,7 @@ CREATE INDEX IF NOT EXISTS idx_notifications_player ON notifications(player_id, 
 CREATE TABLE IF NOT EXISTS contest_winners (
   id              INTEGER PRIMARY KEY AUTOINCREMENT,
   event_date      TEXT    NOT NULL,
-  category        TEXT    NOT NULL CHECK(category IN ('mens_closest', 'womens_closest', 'longest_putt')),
+  category        TEXT    NOT NULL CHECK(category IN ('mens_closest', 'womens_closest', 'longest_putt', 'handicap_winner')),
   player_id       INTEGER REFERENCES players(id) ON DELETE SET NULL,
   player_name     TEXT    NOT NULL DEFAULT '',
   distance        TEXT    DEFAULT '',

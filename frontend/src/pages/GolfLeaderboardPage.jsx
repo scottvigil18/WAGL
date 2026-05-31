@@ -266,7 +266,7 @@ function WeeklyScores() {
 // ─── Contest Winners ──────────────────────────────────────────────────────────
 
 function ContestWinners() {
-  const [selectedDate, setSelectedDate] = useState('all')
+  const [contestTab, setContestTab] = useState('closest')
   const [winners, setWinners] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -275,80 +275,79 @@ function ContestWinners() {
   today.setHours(23, 59, 59, 999)
   const playedEvents = WAGL_SCHEDULE.filter(evt => new Date(evt.date + 'T00:00:00') <= today)
 
-  useEffect(() => {
-    loadWinners()
-  }, [selectedDate])
+  useEffect(() => { loadWinners() }, [])
 
   async function loadWinners() {
     setLoading(true)
     setError('')
-    try {
-      const date = selectedDate === 'all' ? undefined : selectedDate
-      setWinners(await getContestWinners(date))
-    } catch (e) { setError(e.message) }
+    try { setWinners(await getContestWinners()) }
+    catch (e) { setError(e.message) }
     finally { setLoading(false) }
   }
+
+  // Filter winners by contest type
+  const closestCategories = ['mens_closest', 'womens_closest', 'longest_putt']
+  const closestWinners = winners.filter(w => closestCategories.includes(w.category))
+  const handicapWinners = winners.filter(w => w.category === 'handicap_winner')
 
   const categoryLabels = {
     mens_closest: "🎯 Men's Closest to the Hole",
     womens_closest: "🎯 Women's Closest to the Hole",
     longest_putt: "🏌️ Longest Putt",
+    handicap_winner: "🏆 Handicap Winner",
   }
 
-  // Group winners by event_date
-  const grouped = winners.reduce((acc, w) => {
-    if (!acc[w.event_date]) acc[w.event_date] = []
-    acc[w.event_date].push(w)
-    return acc
-  }, {})
+  function renderWinnersList(filtered) {
+    const grouped = filtered.reduce((acc, w) => {
+      if (!acc[w.event_date]) acc[w.event_date] = []
+      acc[w.event_date].push(w)
+      return acc
+    }, {})
+
+    if (filtered.length === 0) return <p className="golf-empty">No winners recorded yet.</p>
+
+    return (
+      <div className="contest-winners-list">
+        {Object.entries(grouped).sort((a, b) => b[0].localeCompare(a[0])).map(([date, entries]) => {
+          const event = WAGL_SCHEDULE.find(e => e.date === date)
+          return (
+            <div key={date} className="contest-week-card">
+              <h4 className="contest-week-title">
+                {event ? `Event ${event.event}: ${event.course}` : date} — {formatEventDate(date)}
+              </h4>
+              <div className="contest-entries">
+                {entries.map(w => (
+                  <div key={w.id} className="contest-entry">
+                    <span className="contest-category">{categoryLabels[w.category] || w.category}</span>
+                    <span className="contest-winner-name">{w.player_name}</span>
+                    {w.distance && <span className="contest-distance">{w.distance}</span>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    )
+  }
 
   return (
     <>
-      <div className="weekly-controls">
-        <label htmlFor="contest-select" className="weekly-label">Filter by Event:</label>
-        <select
-          id="contest-select"
-          className="weekly-select"
-          value={selectedDate}
-          onChange={e => setSelectedDate(e.target.value)}
-        >
-          <option value="all">All Events</option>
-          {[...playedEvents].reverse().map(evt => (
-            <option key={evt.date} value={evt.date}>
-              Event {evt.event} — {formatEventDate(evt.date)} — {evt.course}
-            </option>
-          ))}
-        </select>
+      <div className="leaderboard-tabs" style={{ marginBottom: 16 }}>
+        <button className={`leaderboard-tab-btn${contestTab === 'closest' ? ' active' : ''}`} onClick={() => setContestTab('closest')}>
+          Closest & Long Putt
+        </button>
+        <button className={`leaderboard-tab-btn${contestTab === 'handicap' ? ' active' : ''}`} onClick={() => setContestTab('handicap')}>
+          Handicap Winners
+        </button>
       </div>
 
       {error && <p className="golf-error">{error}</p>}
 
       {loading ? (
         <p className="golf-loading">Loading contest winners…</p>
-      ) : winners.length === 0 ? (
-        <p className="golf-empty">No contest winners recorded yet.</p>
       ) : (
-        <div className="contest-winners-list">
-          {Object.entries(grouped).sort((a, b) => b[0].localeCompare(a[0])).map(([date, entries]) => {
-            const event = WAGL_SCHEDULE.find(e => e.date === date)
-            return (
-              <div key={date} className="contest-week-card">
-                <h4 className="contest-week-title">
-                  {event ? `Event ${event.event}: ${event.course}` : date} — {formatEventDate(date)}
-                </h4>
-                <div className="contest-entries">
-                  {entries.map(w => (
-                    <div key={w.id} className="contest-entry">
-                      <span className="contest-category">{categoryLabels[w.category] || w.category}</span>
-                      <span className="contest-winner-name">{w.player_name}</span>
-                      {w.distance && <span className="contest-distance">{w.distance}</span>}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )
-          })}
-        </div>
+        contestTab === 'closest' ? renderWinnersList(closestWinners) : renderWinnersList(handicapWinners)
       )}
     </>
   )
