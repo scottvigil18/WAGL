@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { submitScore, submitRsvp, getMyRsvp, getMyProfile, getCourses } from '../api/golfApi'
+import { submitScore, submitRsvp, getMyRsvp, getMyProfile, getCourses, addGuest } from '../api/golfApi'
 import { getMostRecentEvent, getFollowingWeekEvent, COURSE_NAME_MAP, formatEventDate } from '../utils/waglSchedule'
 
 export default function GolfScoreForm({ onScoreSubmitted }) {
@@ -245,9 +245,57 @@ export default function GolfScoreForm({ onScoreSubmitted }) {
             {playingNextWeek === 'yes' && (
               <p className="golf-success" style={{marginTop: 8}}>👍 See you at {followingWeekEvent.course}!</p>
             )}
+            {playingNextWeek === 'yes' && (
+              <GuestInvite eventDate={followingWeekEvent.date} />
+            )}
           </div>
         )}
       </div>
+    </div>
+  )
+}
+
+function GuestInvite({ eventDate }) {
+  const [bringingGuest, setBringingGuest] = useState(false)
+  const [guestName, setGuestName] = useState('')
+  const [guestMsg, setGuestMsg] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+
+  async function handleAddGuest() {
+    if (!guestName.trim()) return
+    setSubmitting(true)
+    setGuestMsg('')
+    try {
+      await addGuest(eventDate, guestName.trim())
+      setGuestMsg(`Guest "${guestName.trim()}" added!`)
+      setGuestName('')
+      setBringingGuest(false)
+    } catch (err) { setGuestMsg(err.message) }
+    finally { setSubmitting(false) }
+  }
+
+  return (
+    <div style={{ marginTop: 12 }}>
+      <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: '0.9rem' }}>
+        <input type="checkbox" checked={bringingGuest} onChange={ev => setBringingGuest(ev.target.checked)} />
+        <span>I'm bringing a guest this week</span>
+      </label>
+      {bringingGuest && (
+        <div style={{ marginTop: 8, display: 'flex', gap: 8, alignItems: 'center' }}>
+          <input
+            type="text"
+            value={guestName}
+            onChange={ev => setGuestName(ev.target.value)}
+            placeholder="Guest's name"
+            className="admin-inline-input"
+            style={{ maxWidth: 200 }}
+          />
+          <button type="button" className="btn btn-small btn-primary" onClick={handleAddGuest} disabled={submitting || !guestName.trim()}>
+            {submitting ? 'Adding…' : 'Add Guest'}
+          </button>
+        </div>
+      )}
+      {guestMsg && <p className={guestMsg.includes('added') ? 'golf-success' : 'golf-error'} style={{ marginTop: 6, fontSize: '0.85rem' }}>{guestMsg}</p>}
     </div>
   )
 }

@@ -287,6 +287,36 @@ export async function getTeeAssignments(eventDate) {
   return data
 }
 
+export async function addGuest(eventDate, guestName) {
+  const res = await fetch('/api/golf/guests', {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ event_date: eventDate, guest_name: guestName }),
+  })
+  const data = await res.json()
+  if (!res.ok) throw new Error(data.error || 'Failed to add guest')
+  return data
+}
+
+export async function removeGuest(id) {
+  const res = await fetch(`/api/golf/guests/${id}`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+  })
+  const data = await res.json()
+  if (!res.ok) throw new Error(data.error || 'Failed to remove guest')
+  return data
+}
+
+export async function getGuests(eventDate) {
+  const res = await fetch(`/api/golf/guests?event_date=${encodeURIComponent(eventDate)}`, {
+    headers: authHeaders(),
+  })
+  const data = await res.json()
+  if (!res.ok) throw new Error(data.error || 'Failed to fetch guests')
+  return data
+}
+
 export async function editScore(id, score, datePlayed, holes) {
   const body = { score, date_played: datePlayed }
   if (holes !== undefined) body.holes = holes

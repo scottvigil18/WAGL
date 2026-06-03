@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { WAGL_SCHEDULE, isEventPlayed, formatEventDate, getFollowingWeekEvent } from '../utils/waglSchedule'
-import { adminGetRsvps, getEventRsvps, adminSaveTeeAssignments, adminGetTeeAssignments, getTeeAssignments, getUser } from '../api/golfApi'
+import { adminGetRsvps, getEventRsvps, adminSaveTeeAssignments, adminGetTeeAssignments, getTeeAssignments, getGuests, getUser } from '../api/golfApi'
 
 export default function GolfSchedulePage() {
   const user = getUser()
@@ -105,6 +105,7 @@ function ThisWeekTab() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [teeSlots, setTeeSlots] = useState([])
+  const [guests, setGuests] = useState([])
 
   const nextEvent = getFollowingWeekEvent()
 
@@ -115,6 +116,11 @@ function ThisWeekTab() {
         const rsvpData = await getEventRsvps(nextEvent.date)
         setRsvps(rsvpData)
         const yesPlayers = rsvpData.filter(r => r.response === 'yes')
+
+        // Load guests
+        try {
+          setGuests(await getGuests(nextEvent.date))
+        } catch (e) { /* no guests */ }
 
         // Try to load saved tee assignments
         let slots = null
@@ -229,6 +235,17 @@ function ThisWeekTab() {
               <ul className="rsvp-list">
                 {noRsvps.map(r => (
                   <li key={r.id}>{r.first_name || r.username} {r.last_name || ''}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {guests.length > 0 && (
+            <div style={{ marginTop: 16 }}>
+              <h4>👤 Guests ({guests.length})</h4>
+              <ul className="rsvp-list">
+                {guests.map(g => (
+                  <li key={g.id}>{g.guest_name} <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>(invited by {g.first_name || g.username})</span></li>
                 ))}
               </ul>
             </div>

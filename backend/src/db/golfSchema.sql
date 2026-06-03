@@ -134,3 +134,12 @@ CREATE TABLE IF NOT EXISTS tee_assignments (
   created_at  TEXT    NOT NULL DEFAULT (datetime('now')),
   UNIQUE(event_date, slot_index, position)
 );
+
+-- Guests table
+CREATE TABLE IF NOT EXISTS guests (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  event_date  TEXT    NOT NULL,
+  invited_by  INTEGER NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+  guest_name  TEXT    NOT NULL,
+  created_at  TEXT    NOT NULL DEFAULT (datetime('now'))
+);

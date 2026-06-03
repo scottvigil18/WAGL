@@ -1,0 +1,41 @@
+{
+  "Files": [
+    {
+      "Id": "C:\\Users\\Dev\\source\\WAGL App\\WAGL\\proxy\\wwwroot\\assets\\index-CozxJdAN.css",
+      "PackagePath": "staticwebassets\\assets\\index-CozxJdAN.css"
+    },
+    {
+      "Id": "C:\\Users\\Dev\\source\\WAGL App\\WAGL\\proxy\\wwwroot\\assets\\index-DAbt1O7m.js",
+      "PackagePath": "staticwebassets\\assets\\index-DAbt1O7m.js"
+    },
+    {
+      "Id": "C:\\Users\\Dev\\source\\WAGL App\\WAGL\\proxy\\wwwroot\\favicon.svg",
+      "PackagePath": "staticwebassets\\favicon.svg"
+    },
+    {
+      "Id": "C:\\Users\\Dev\\source\\WAGL App\\WAGL\\proxy\\wwwroot\\icons.svg",
+      "PackagePath": "staticwebassets\\icons.svg"
+    },
+    {
+      "Id": "C:\\Users\\Dev\\source\\WAGL App\\WAGL\\proxy\\wwwroot\\index.html",
+      "PackagePath": "staticwebassets\\index.html"
+    },
+    {
+      "Id": "obj\\Debug\\net8.0\\staticwebassets\\msbuild.WaglProxy.Microsoft.AspNetCore.StaticWebAssets.props",
+      "PackagePath": "build\\Microsoft.AspNetCore.StaticWebAssets.props"
+    },
+    {
+      "Id": "obj\\Debug\\net8.0\\staticwebassets\\msbuild.build.WaglProxy.props",
+      "PackagePath": "build\\WaglProxy.props"
+    },
+    {
+      "Id": "obj\\Debug\\net8.0\\staticwebassets\\msbuild.buildMultiTargeting.WaglProxy.props",
+      "PackagePath": "buildMultiTargeting\\WaglProxy.props"
+    },
+    {
+      "Id": "obj\\Debug\\net8.0\\staticwebassets\\msbuild.buildTransitive.WaglProxy.props",
+      "PackagePath": "buildTransitive\\WaglProxy.props"
+    }
+  ],
+  "ElementsToRemove": []
+}

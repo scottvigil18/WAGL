@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "dgSpecHash": "KPoHsmXjbdeY1J7ojwgT4yo36ZPaBLXYJKZ91FGWkvN6rsUvCKSSO41j4CwPlScSf55CAyRXhMXEnh1UUn/4MQ==",
+  "success": true,
+  "projectFilePath": "C:\\Users\\Dev\\source\\WAGL App\\WAGL\\proxy\\WaglProxy.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\Dev\\.nuget\\packages\\system.io.hashing\\8.0.0\\system.io.hashing.8.0.0.nupkg.sha512",
+    "C:\\Users\\Dev\\.nuget\\packages\\yarp.reverseproxy\\2.3.0\\yarp.reverseproxy.2.3.0.nupkg.sha512"
+  ],
+  "logs": []
+}

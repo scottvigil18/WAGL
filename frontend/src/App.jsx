@@ -19,6 +19,7 @@ import GolfContactPage from './pages/GolfContactPage'
 import GolfJoinPage from './pages/GolfJoinPage'
 import GolfNotificationsPage from './pages/GolfNotificationsPage'
 import GolfForceResetPage from './pages/GolfForceResetPage'
+import GolfRulesPage from './pages/GolfRulesPage'
 
 // Simple client-side router using hash-based navigation
 function useRouter() {
@@ -152,6 +153,8 @@ export default function App() {
       golfPage = <GolfPhotosPage />
     } else if (path === '#/golf/notifications') {
       golfPage = <GolfNotificationsPage />
+    } else if (path === '#/golf/rules') {
+      golfPage = <GolfRulesPage />
     } else if (path === '#/golf/profile') {
       golfPage = <GolfProfilePage />
     } else if (path.startsWith('#/golf/player/')) {

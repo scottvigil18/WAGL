@@ -492,6 +492,66 @@ router.get('/contest-winners', (req, res) => {
 });
 
 /**
+ * POST /api/golf/guests
+ * Add a guest for an event. Auth required.
+ */
+router.post('/guests', authMiddleware, (req, res) => {
+  try {
+    const { event_date, guest_name } = req.body;
+    if (!event_date || !guest_name || !guest_name.trim()) {
+      return res.status(400).json({ error: 'event_date and guest_name required' });
+    }
+    golfDb.prepare(
+      'INSERT INTO guests (event_date, invited_by, guest_name) VALUES (?, ?, ?)'
+    ).run(event_date, req.user.id, guest_name.trim());
+    return res.status(201).json({ message: 'Guest added' });
+  } catch (err) {
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * DELETE /api/golf/guests/:id
+ * Remove a guest. Only the inviter or admin can delete.
+ */
+router.delete('/guests/:id', authMiddleware, (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (isNaN(id)) return res.status(400).json({ error: 'Invalid ID' });
+    const guest = golfDb.prepare('SELECT * FROM guests WHERE id = ?').get(id);
+    if (!guest) return res.status(404).json({ error: 'Guest not found' });
+    if (guest.invited_by !== req.user.id && req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Not authorized' });
+    }
+    golfDb.prepare('DELETE FROM guests WHERE id = ?').run(id);
+    return res.json({ message: 'Guest removed' });
+  } catch (err) {
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * GET /api/golf/guests?event_date=YYYY-MM-DD
+ * List guests for an event. Auth required.
+ */
+router.get('/guests', authMiddleware, (req, res) => {
+  try {
+    const { event_date } = req.query;
+    if (!event_date) return res.status(400).json({ error: 'event_date required' });
+    const guests = golfDb.prepare(`
+      SELECT g.id, g.guest_name, g.event_date, g.invited_by, p.first_name, p.last_name, p.username
+      FROM guests g
+      JOIN players p ON g.invited_by = p.id
+      WHERE g.event_date = ?
+      ORDER BY g.created_at
+    `).all(event_date);
+    return res.json(guests);
+  } catch (err) {
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
  * GET /api/golf/tee-assignments?event_date=YYYY-MM-DD
  * Public (auth required): load saved tee time assignments for an event.
  */

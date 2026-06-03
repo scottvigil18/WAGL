@@ -2124,3 +2124,28 @@
   font-size: 0.85rem;
   color: var(--text-muted);
 }
+
+/* ─── Leaderboard Compact Table ────────────────────────────────────────────── */
+.golf-page-wide .golf-table th,
+.golf-page-wide .golf-table td {
+  padding: 5px 6px;
+  font-size: 0.78rem;
+}
+
+.golf-page-wide .golf-table th {
+  font-size: 0.72rem;
+}
+
+.golf-page-wide {
+  padding-top: 16px;
+  padding-bottom: 16px;
+}
+
+.golf-page-wide h2 {
+  margin-bottom: 10px;
+  font-size: 1.2rem;
+}
+
+.leaderboard-tab-content {
+  padding: 12px;
+}

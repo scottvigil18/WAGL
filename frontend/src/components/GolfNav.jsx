@@ -75,6 +75,9 @@ export default function GolfNav({ user, onLogout }) {
           <a href="#/golf/photos" className={hash === '#/golf/photos' ? 'active' : ''}>
             Photos
           </a>
+          <a href="#/golf/rules" className={hash === '#/golf/rules' ? 'active' : ''}>
+            League Rules
+          </a>
         </nav>
         <div className="golf-nav-user">
           {notifCount > 0 && user?.role !== 'admin' && (
