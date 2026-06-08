@@ -604,27 +604,28 @@ function PlayersTab() {
               <tr key={p.id}>
                 {editId === p.id ? (
                   <>
+                    <td></td>
                     <td>
                       <input className="admin-inline-input" placeholder="First" value={editFields.first_name}
-                        onChange={e => setEditFields(f => ({ ...f, first_name: e.target.value }))} />
+                        onChange={e => setEditFields(f => ({ ...f, first_name: e.target.value }))} style={{width: '100%'}} />
                       <input className="admin-inline-input" placeholder="Last" value={editFields.last_name}
-                        onChange={e => setEditFields(f => ({ ...f, last_name: e.target.value }))} style={{marginTop: 4}} />
+                        onChange={e => setEditFields(f => ({ ...f, last_name: e.target.value }))} style={{marginTop: 4, width: '100%'}} />
                     </td>
                     <td>
                       <input className="admin-inline-input" value={editFields.username}
-                        onChange={e => setEditFields(f => ({ ...f, username: e.target.value }))} />
+                        onChange={e => setEditFields(f => ({ ...f, username: e.target.value }))} style={{width: '100%'}} />
                     </td>
                     <td>
                       <input type="email" className="admin-inline-input" value={editFields.email}
-                        onChange={e => setEditFields(f => ({ ...f, email: e.target.value }))} />
+                        onChange={e => setEditFields(f => ({ ...f, email: e.target.value }))} style={{width: '100%'}} />
                     </td>
                     <td>
                       <input type="tel" className="admin-inline-input" value={editFields.phone}
-                        onChange={e => setEditFields(f => ({ ...f, phone: formatPhoneInput(e.target.value) }))} maxLength={12} />
+                        onChange={e => setEditFields(f => ({ ...f, phone: formatPhoneInput(e.target.value) }))} maxLength={12} style={{width: '100%'}} />
                     </td>
                     <td>
                       <select className="admin-inline-input" value={editFields.role}
-                        onChange={e => setEditFields(f => ({ ...f, role: e.target.value }))}>
+                        onChange={e => setEditFields(f => ({ ...f, role: e.target.value }))} style={{width: '100%'}}>
                         <option value="player">player</option>
                         <option value="admin">admin</option>
                       </select>

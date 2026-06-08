@@ -118,8 +118,10 @@ function ThisWeekTab() {
         const yesPlayers = rsvpData.filter(r => r.response === 'yes')
 
         // Load guests
+        let guestList = []
         try {
-          setGuests(await getGuests(nextEvent.date))
+          guestList = await getGuests(nextEvent.date)
+          setGuests(guestList)
         } catch (e) { /* no guests */ }
 
         // Try to load saved tee assignments
@@ -158,6 +160,37 @@ function ThisWeekTab() {
             [0, 1, 2, 3].map(j => yesPlayers[i * 4 + j] || null)
           )
         }
+
+        // Place guests next to their inviters
+        for (const g of guestList) {
+          const guestEntry = { player_id: `guest_${g.id}`, first_name: g.guest_name, last_name: '(Guest)', username: g.guest_name, isGuest: true }
+          // Find which slot the inviter is in
+          let inviterSlot = -1
+          for (let i = 0; i < slots.length; i++) {
+            if (slots[i].some(p => p && p.player_id === g.invited_by)) {
+              inviterSlot = i
+              break
+            }
+          }
+          let placed = false
+          // Try to place in same slot as inviter
+          if (inviterSlot >= 0) {
+            for (let j = 0; j < 4; j++) {
+              if (!slots[inviterSlot][j]) { slots[inviterSlot][j] = guestEntry; placed = true; break }
+            }
+          }
+          // If inviter's slot is full, place at the end
+          if (!placed) {
+            for (let i = slots.length - 1; i >= 0; i--) {
+              for (let j = 0; j < 4; j++) {
+                if (!slots[i][j]) { slots[i][j] = guestEntry; placed = true; break }
+              }
+              if (placed) break
+            }
+          }
+          if (!placed) slots.push([guestEntry, null, null, null])
+        }
+
         setTeeSlots(slots)
       } catch (e) { setError(e.message) }
       finally { setLoading(false) }
@@ -216,7 +249,7 @@ function ThisWeekTab() {
                     {[0, 1, 2, 3].map(pos => {
                       const player = group[pos]
                       return (
-                        <div key={pos} className={`tee-slot${player ? ' filled' : ' empty'}`}>
+                        <div key={pos} className={`tee-slot${player ? ' filled' : ' empty'}${player?.isGuest ? ' guest' : ''}`}>
                           {player
                             ? <span className="tee-slot-name">{player.first_name || player.username} {player.last_name || ''}</span>
                             : <span className="tee-slot-empty">Open</span>}
@@ -259,6 +292,7 @@ function ThisWeekTab() {
 function RsvpsTab() {
   const [selectedDate, setSelectedDate] = useState('')
   const [rsvps, setRsvps] = useState([])
+  const [guests, setGuests] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [teeSlots, setTeeSlots] = useState([])
@@ -334,8 +368,36 @@ function RsvpsTab() {
             }
             slots.push(group)
           }
-          setTeeSlots(slots)
+          savedSlots = slots
         }
+
+        // Load and place guests
+        let guestList = []
+        try { guestList = await getGuests(selectedDate); setGuests(guestList) } catch (e) { /* no guests */ }
+        for (const g of guestList) {
+          const guestEntry = { player_id: `guest_${g.id}`, first_name: g.guest_name, last_name: '(Guest)', username: g.guest_name, isGuest: true }
+          let inviterSlot = -1
+          for (let i = 0; i < savedSlots.length; i++) {
+            if (savedSlots[i].some(p => p && p.player_id === g.invited_by)) { inviterSlot = i; break }
+          }
+          let placed = false
+          if (inviterSlot >= 0) {
+            for (let j = 0; j < 4; j++) {
+              if (!savedSlots[inviterSlot][j]) { savedSlots[inviterSlot][j] = guestEntry; placed = true; break }
+            }
+          }
+          if (!placed) {
+            for (let i = savedSlots.length - 1; i >= 0; i--) {
+              for (let j = 0; j < 4; j++) {
+                if (!savedSlots[i][j]) { savedSlots[i][j] = guestEntry; placed = true; break }
+              }
+              if (placed) break
+            }
+          }
+          if (!placed) savedSlots.push([guestEntry, null, null, null])
+        }
+
+        setTeeSlots(savedSlots)
       } catch (e) { setError(e.message) }
       finally { setLoading(false) }
     }
@@ -416,7 +478,12 @@ function RsvpsTab() {
     if (!selectedDate) return
     setSaveMsg('')
     try {
-      const slots = teeSlots.map(group => group.map(p => p ? p.player_id : null))
+      // Only save real players (not guests) — guests are auto-placed on load
+      const slots = teeSlots.map(group => group.map(p => {
+        if (!p) return null
+        if (p.isGuest) return null
+        return typeof p.player_id === 'number' ? p.player_id : parseInt(p.player_id, 10) || null
+      }))
       await adminSaveTeeAssignments(selectedDate, slots)
       setSaveMsg('✅ Tee times saved!')
       setTimeout(() => setSaveMsg(''), 3000)
@@ -487,7 +554,7 @@ function RsvpsTab() {
                       {group.map((player, pos) => (
                         <div
                           key={pos}
-                          className={`tee-slot${player ? ' filled' : ' empty'}${dragPlayer ? ' drop-target' : ''}`}
+                          className={`tee-slot${player ? ' filled' : ' empty'}${dragPlayer ? ' drop-target' : ''}${player?.isGuest ? ' guest' : ''}`}
                           draggable={!!player}
                           onDragStart={() => player && handleDragStart(player, slotIdx, pos)}
                           onDragOver={handleDragOver}
@@ -518,6 +585,22 @@ function RsvpsTab() {
               <ul className="rsvp-list">
                 {noRsvps.map(r => (
                   <li key={r.id}>{r.first_name || r.username} {r.last_name || ''}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {guests.length > 0 && (
+            <div style={{ marginTop: 16, background: '#fffbeb', border: '1px solid #fbbf24', borderRadius: 8, padding: 14 }}>
+              <h4 style={{ margin: '0 0 8px', color: '#92400e' }}>👤 Guests ({guests.length})</h4>
+              <ul className="rsvp-list">
+                {guests.map(g => (
+                  <li key={g.id}>
+                    <strong>{g.guest_name}</strong>
+                    <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginLeft: 8 }}>
+                      — invited by {g.first_name || g.username} {g.last_name || ''}
+                    </span>
+                  </li>
                 ))}
               </ul>
             </div>

@@ -2149,3 +2149,10 @@
 .leaderboard-tab-content {
   padding: 12px;
 }
+
+/* ─── Guest Tee Slot ───────────────────────────────────────────────────────── */
+.tee-slot.guest {
+  background: #fef3c7;
+  border-color: #fbbf24;
+  color: #92400e;
+}

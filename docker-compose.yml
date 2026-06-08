@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  wagl:
+    build: .
+    ports:
+      - "4000:4000"
+    volumes:
+      - wagl-data:/app/backend/data
+    environment:
+      - NODE_ENV=production
+      - PORT=4000
+      - SERVE_FRONTEND=true
+      - JWT_SECRET=change-this-to-a-strong-secret
+    restart: unless-stopped
+
+volumes:
+  wagl-data:
+    driver: local

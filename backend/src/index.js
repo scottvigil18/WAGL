@@ -31,6 +31,16 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// ─── Serve Frontend (production/Docker) ───────────────────────────────────────
+if (process.env.SERVE_FRONTEND === 'true') {
+  const frontendPath = path.join(__dirname, '../../frontend/dist');
+  app.use(express.static(frontendPath));
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api/')) return next();
+    res.sendFile(path.join(frontendPath, 'index.html'));
+  });
+}
+
 // 404 handler for unknown API routes
 app.use('/api/*', (req, res) => {
   res.status(404).json({ error: 'Not found' });
