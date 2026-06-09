@@ -124,6 +124,12 @@ CREATE TABLE IF NOT EXISTS league_settings (
 
 INSERT OR IGNORE INTO league_settings (key, value) VALUES ('max_players', '50');
 
+-- Contest Overrides table (admin can change contest type per event)
+CREATE TABLE IF NOT EXISTS contest_overrides (
+  event_date  TEXT    PRIMARY KEY,
+  contest     TEXT    NOT NULL
+);
+
 -- Tee Time Assignments table
 CREATE TABLE IF NOT EXISTS tee_assignments (
   id          INTEGER PRIMARY KEY AUTOINCREMENT,

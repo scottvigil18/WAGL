@@ -668,6 +668,25 @@ router.post('/contest-winners', (req, res) => {
   }
 });
 
+/**
+ * PUT /api/golf/admin/contest-override
+ * Set or update the contest type for an event date.
+ */
+router.put('/contest-override', (req, res) => {
+  try {
+    const { event_date, contest } = req.body;
+    if (!event_date || !contest) {
+      return res.status(400).json({ error: 'event_date and contest required' });
+    }
+    golfDb.prepare(
+      'INSERT OR REPLACE INTO contest_overrides (event_date, contest) VALUES (?, ?)'
+    ).run(event_date, contest);
+    return res.json({ message: 'Contest updated' });
+  } catch (err) {
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // ─── RSVPs ────────────────────────────────────────────────────────────────────
 
 /**

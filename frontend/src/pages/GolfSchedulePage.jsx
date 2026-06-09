@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { WAGL_SCHEDULE, isEventPlayed, formatEventDate, getFollowingWeekEvent } from '../utils/waglSchedule'
-import { adminGetRsvps, getEventRsvps, adminSaveTeeAssignments, adminGetTeeAssignments, getTeeAssignments, getGuests, getUser } from '../api/golfApi'
+import { adminGetRsvps, getEventRsvps, adminSaveTeeAssignments, adminGetTeeAssignments, getTeeAssignments, getGuests, getContestOverrides, adminSetContestOverride, getUser } from '../api/golfApi'
 
 export default function GolfSchedulePage() {
   const user = getUser()
@@ -35,6 +35,34 @@ function ScheduleTab() {
   const today = new Date()
   today.setHours(0, 0, 0, 0)
   const nextEventIdx = WAGL_SCHEDULE.findIndex(e => new Date(e.date + 'T00:00:00') >= today)
+  const user = getUser()
+  const isAdmin = user?.role === 'admin'
+  const [overrides, setOverrides] = useState({})
+
+  useEffect(() => {
+    getContestOverrides().then(setOverrides).catch(() => {})
+  }, [])
+
+  const contestOptions = [
+    'Closest to the hole & Long putt',
+    'Handicap',
+  ]
+
+  const [saveMsg, setSaveMsg] = useState('')
+
+  async function handleContestChange(eventDate, newContest) {
+    setOverrides(prev => ({ ...prev, [eventDate]: newContest }))
+    setSaveMsg('')
+    try {
+      await adminSetContestOverride(eventDate, newContest)
+      setSaveMsg('✅ Contest saved!')
+      setTimeout(() => setSaveMsg(''), 3000)
+    } catch (e) { setSaveMsg(e.message) }
+  }
+
+  function getContest(evt) {
+    return overrides[evt.date] || evt.contest
+  }
 
   // Check if an event is currently in progress (event day, 4PM-9PM Mountain Time)
   function isInProgress(evtDate) {
@@ -53,6 +81,7 @@ function ScheduleTab() {
       <p className="schedule-legend">
         <span className="schedule-dot played" /> Played &nbsp;&nbsp;
         <span className="schedule-dot upcoming" /> Upcoming
+        {saveMsg && <span style={{ marginLeft: 16, fontSize: '0.85rem', color: '#166534' }}>{saveMsg}</span>}
       </p>
       <div className="golf-table-wrap">
         <table className="golf-table">
@@ -80,7 +109,18 @@ function ScheduleTab() {
                   <td>{formatEventDate(evt.date)}</td>
                   <td>{evt.time}</td>
                   <td>{evt.course}</td>
-                  <td>{evt.contest}</td>
+                  <td>{isAdmin && !isEventPlayed(evt.date) ? (
+                    <select
+                      value={getContest(evt)}
+                      onChange={e => handleContestChange(evt.date, e.target.value)}
+                      className="admin-inline-input"
+                      style={{ fontSize: '0.78rem', padding: '2px 4px' }}
+                    >
+                      {contestOptions.map(opt => (
+                        <option key={opt} value={opt}>{opt}</option>
+                      ))}
+                    </select>
+                  ) : getContest(evt)}</td>
                   <td>
                     {inProgress
                       ? <span className="schedule-status next">In Progress</span>

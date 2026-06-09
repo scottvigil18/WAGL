@@ -531,6 +531,21 @@ router.delete('/guests/:id', authMiddleware, (req, res) => {
 });
 
 /**
+ * GET /api/golf/contest-overrides
+ * Public: get all contest overrides.
+ */
+router.get('/contest-overrides', (req, res) => {
+  try {
+    const rows = golfDb.prepare('SELECT event_date, contest FROM contest_overrides').all();
+    const map = {};
+    for (const r of rows) map[r.event_date] = r.contest;
+    return res.json(map);
+  } catch (err) {
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
  * GET /api/golf/guests?event_date=YYYY-MM-DD
  * List guests for an event. Auth required.
  */

@@ -317,6 +317,24 @@ export async function getGuests(eventDate) {
   return data
 }
 
+export async function getContestOverrides() {
+  const res = await fetch('/api/golf/contest-overrides')
+  const data = await res.json()
+  if (!res.ok) throw new Error(data.error || 'Failed to fetch overrides')
+  return data
+}
+
+export async function adminSetContestOverride(eventDate, contest) {
+  const res = await fetch('/api/golf/admin/contest-override', {
+    method: 'PUT',
+    headers: authHeaders(),
+    body: JSON.stringify({ event_date: eventDate, contest }),
+  })
+  const data = await res.json()
+  if (!res.ok) throw new Error(data.error || 'Failed to update contest')
+  return data
+}
+
 export async function editScore(id, score, datePlayed, holes) {
   const body = { score, date_played: datePlayed }
   if (holes !== undefined) body.holes = holes
