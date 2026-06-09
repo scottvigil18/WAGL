@@ -17,11 +17,14 @@ RUN cd backend && npm ci --production
 # Copy backend source
 COPY backend/src ./backend/src
 
+# Copy existing data (database, avatars, photos)
+COPY backend/data ./backend/data
+
 # Copy built frontend from stage 1
 COPY --from=frontend-build /app/frontend/dist ./frontend/dist
 
-# Create data directory for SQLite persistence
-RUN mkdir -p /app/backend/data
+# Ensure data directories exist
+RUN mkdir -p /app/backend/data/avatars /app/backend/data/photos
 
 # Environment
 ENV NODE_ENV=production
